@@ -1,0 +1,45 @@
+{
+  "artists": [
+    {
+      "name": "Danny Diablo",
+      "album": "Dollerz Make Sense",
+      "tracks": [
+        "Intro",
+        "Ill Roc Soldiers ft. Stikman",
+        "Stready Minds ft. Diggy Ill-Roc",
+        "Grimey ft. Stikman",
+        "Smash Everything ft. Stikman",
+        "Queens & Jersey ft. Stikman",
+        "Spit Fire ft. Diggy Ill-Roc, Wes Nihil & Tony Slippaz",
+        "Remember My Name ft. Christian Koresh & Diggy Ill-Roc",
+        "The Foundation ft. Stikman",
+        "In the City ft. Joey D"
+      ]
+    },
+    {
+      "name": "Korn",
+      "album": "Follow the Leader",
+      "tracks_count": 14
+    },
+    {
+      "name": "Morgan Wallen",
+      "album": "One Thing At A Time",
+      "tracks_count": 36
+    },
+    {
+      "name": "Biohazard",
+      "albums": ["Kill Or Be Killed", "Uncivilization"],
+      "tracks_count": 27
+    },
+    {
+      "name": "NOFX",
+      "album": "The Decline",
+      "tracks_count": 1
+    },
+    {
+      "name": "Hatebreed",
+      "title": "Live Dominance Full Concert",
+      "type": "video"
+    }
+  ]
+}
