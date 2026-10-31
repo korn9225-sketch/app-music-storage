@@ -1,6 +1,15 @@
 # 🎵 Music & Media Storage Repository
 
-Official media CDN and release asset storage repository for the **Zune Music & Video Player** Android application.
+Official media CDN, release asset storage, and workspace setup for the **Zune Music & Video Player** Android application.
+
+---
+
+## ⚡ Quick Workspace Auto-Setup (For On-The-Go Coding)
+
+Download and run one of these scripts on any fresh computer to automatically clone all your projects into your `AndroidStudioProjects` folder:
+
+* 🪟 **Windows Script**: [`setup_workspace.bat`](https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/setup_workspace.bat)
+* 🐧 **Linux/Mac Script**: [`setup_workspace.sh`](https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/setup_workspace.sh)
 
 ---
 
