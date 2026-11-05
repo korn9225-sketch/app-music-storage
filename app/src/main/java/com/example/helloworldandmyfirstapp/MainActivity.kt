@@ -58,6 +58,7 @@ import coil.compose.AsyncImagePainter
 import coil.request.ImageRequest
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.IntSize
@@ -1023,6 +1024,56 @@ fun ZuneKineticBackground(artist: String, title: String, artworkUrl: String?) {
     }
 }
 
+@Composable
+fun ZuneNeonAudioSpectrum(isPlaying: Boolean, modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "SpectrumAnim")
+    val barCount = 16
+    val barPhases = remember { List(barCount) { (100..500).random() } }
+    val barSpeeds = remember { List(barCount) { (400..1000).random() } }
+
+    val animatedHeights = barPhases.mapIndexed { index, _ ->
+        infiniteTransition.animateFloat(
+            initialValue = 0.12f,
+            targetValue = 0.95f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = barSpeeds[index], easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "bar_$index"
+        )
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .padding(horizontal = 48.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        for (i in 0 until barCount) {
+            val heightFactor = if (isPlaying) animatedHeights[i].value else 0.15f
+            val barColor = if (i % 2 == 0) Color(0xFFE5007D) else Color(0xFF00E5FF)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 2.dp)
+                    .fillMaxHeight(heightFactor)
+                    .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                barColor,
+                                barColor.copy(alpha = 0.4f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerView(
@@ -1202,6 +1253,9 @@ fun PlayerView(
                         .padding(bottom = 60.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Retro Zune Neon Audio Spectrum Visualizer
+                    ZuneNeonAudioSpectrum(isPlaying = isPlaying, modifier = Modifier.padding(bottom = 8.dp))
+
                     // Minimalist Seek Bar
                     Column(modifier = Modifier.padding(horizontal = 48.dp)) {
                         Slider(
@@ -1956,7 +2010,7 @@ fun SettingsView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "v1.1 ZuneBeta11052026 06:41 PM",
+                text = "v1.2 ZuneBeta NeonSpectrum Edition",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
