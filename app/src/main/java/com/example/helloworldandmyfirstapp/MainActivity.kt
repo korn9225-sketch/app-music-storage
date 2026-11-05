@@ -627,9 +627,6 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
-                                if (isHalloweenSeasonActive()) {
-                                    DrippingBloodTabOverlay()
-                                }
                             }
                         }
                     },
@@ -953,7 +950,7 @@ fun ZuneKineticBackground(artist: String, title: String, artworkUrl: String?) {
                 )
         )
 
-        val spookyTextColor = if (isHalloweenSeasonActive()) Color(0xFFFF3300).copy(alpha = 0.85f) else Color.White
+        val kineticTextColor = Color.White.copy(alpha = 0.85f)
 
         // 3. Kinetic Typography Layer
         Text(
@@ -963,7 +960,7 @@ fun ZuneKineticBackground(artist: String, title: String, artworkUrl: String?) {
                 fontSize = 220.sp,
                 letterSpacing = (-14).sp
             ),
-            color = spookyTextColor,
+            color = kineticTextColor,
             modifier = Modifier
                 .align(Alignment.Center)
                 .wrapContentSize(unbounded = true)
@@ -983,7 +980,7 @@ fun ZuneKineticBackground(artist: String, title: String, artworkUrl: String?) {
                 fontSize = 180.sp,
                 letterSpacing = (-12).sp
             ),
-            color = spookyTextColor,
+            color = kineticTextColor,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .wrapContentSize(unbounded = true)
@@ -995,9 +992,6 @@ fun ZuneKineticBackground(artist: String, title: String, artworkUrl: String?) {
             softWrap = false,
             maxLines = 1
         )
-
-        // Spooky Halloween Floating Particles Layer (Active until Nov 15, 2026 12:00 AM EST)
-        SpookyFloatingParticlesOverlay()
     }
 }
 
@@ -1214,49 +1208,20 @@ fun PlayerView(
                     // Geometric Playback Controls
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally)
+                        horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally)
                     ) {
-                        IconButton(onClick = { playerState?.seekToPreviousMediaItem() }) {
-                            Icon(
-                                Icons.Default.SkipPrevious,
-                                contentDescription = "Previous",
-                                modifier = Modifier.size(40.dp),
-                                tint = Color.Blue
-                            )
-                        }
+                        ThanksgivingSidePreviousButton(
+                            onClick = { playerState?.seekToPreviousMediaItem() }
+                        )
                         
-                        if (isHalloweenPumpkinActive()) {
-                            ScaryPumpkinPlayPauseButton(
-                                isPlaying = isPlaying,
-                                onClick = { if (isPlaying) playerState?.pause() else playerState?.play() }
-                            )
-                        } else {
-                            Surface(
-                                onClick = { if (isPlaying) playerState?.pause() else playerState?.play() },
-                                shape = androidx.compose.foundation.shape.CircleShape,
-                                color = Color(0xFFE5007D),
-                                modifier = Modifier.size(80.dp),
-                                tonalElevation = 8.dp
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        contentDescription = "Play/Pause",
-                                        modifier = Modifier.size(44.dp),
-                                        tint = Color.White
-                                    )
-                                }
-                            }
-                        }
+                        TurkeyPlayPauseButton(
+                            isPlaying = isPlaying,
+                            onClick = { if (isPlaying) playerState?.pause() else playerState?.play() }
+                        )
 
-                        IconButton(onClick = { playerState?.seekToNextMediaItem() }) {
-                            Icon(
-                                Icons.Default.SkipNext,
-                                contentDescription = "Next",
-                                modifier = Modifier.size(40.dp),
-                                tint = Color.Red
-                            )
-                        }
+                        ThanksgivingSideNextButton(
+                            onClick = { playerState?.seekToNextMediaItem() }
+                        )
                     }
                 }
             }
@@ -1294,13 +1259,7 @@ fun PlayerView(
     }
 }
 
-fun isHalloweenPumpkinActive(): Boolean {
-    val cutoffEst = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("America/New_York")).apply {
-        set(2026, java.util.Calendar.NOVEMBER, 15, 0, 0, 0)
-        set(java.util.Calendar.MILLISECOND, 0)
-    }
-    return System.currentTimeMillis() < cutoffEst.timeInMillis
-}
+
 
 suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
     return withContext(Dispatchers.IO) {
@@ -1308,7 +1267,9 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
             val url = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/contents")
             val conn = url.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
-            conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+            if (PlaybackService.GITHUB_TOKEN.isNotBlank()) {
+                conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+            }
             conn.setRequestProperty("Accept", "application/vnd.github+json")
             conn.connectTimeout = 10000
             conn.readTimeout = 10000
@@ -1317,26 +1278,46 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                 val jsonStr = conn.inputStream.bufferedReader().readText()
                 val jsonArray = JSONArray(jsonStr)
 
-                var isolatedArtworkUrl: String? = null
-                val fetchedAudioSongs = mutableListOf<Song>()
+                val imageMap = mutableMapOf<String, String>()
+                var defaultIsolatedArtworkUrl: String? = null
+                val fetchedMediaList = mutableListOf<Song>()
 
+                // Pass 1: Collect image files for artwork/thumbnails
                 for (i in 0 until jsonArray.length()) {
                     val fileObj = jsonArray.getJSONObject(i)
                     val fileName = fileObj.optString("name", "")
                     val downloadUrl = fileObj.optString("download_url", "")
-
                     if (fileName.isEmpty() || downloadUrl.isEmpty()) continue
 
                     val lowerName = fileName.lowercase()
-
-                    // 1. ISOLATE IMAGE FILES (e.g. misfits_exact_skull.jpg) so they don't crash the media player!
-                    if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png")) {
-                        isolatedArtworkUrl = downloadUrl
-                        continue
+                    if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png") || lowerName.endsWith(".webp")) {
+                        val baseName = fileName.substringBeforeLast(".").lowercase()
+                        imageMap[baseName] = downloadUrl
+                        if (defaultIsolatedArtworkUrl == null) {
+                            defaultIsolatedArtworkUrl = downloadUrl
+                        }
                     }
+                }
 
-                    // 2. FILTER MP3 & AUDIO FILES ONLY
-                    if (lowerName.endsWith(".mp3") || lowerName.endsWith(".m4a")) {
+                // Pass 2: Process Audio and Video files
+                for (i in 0 until jsonArray.length()) {
+                    val fileObj = jsonArray.getJSONObject(i)
+                    val fileName = fileObj.optString("name", "")
+                    val downloadUrl = fileObj.optString("download_url", "")
+                    if (fileName.isEmpty() || downloadUrl.isEmpty()) continue
+
+                    val lowerName = fileName.lowercase()
+                    val baseName = fileName.substringBeforeLast(".").lowercase()
+
+                    val isAudio = lowerName.endsWith(".mp3") || lowerName.endsWith(".m4a") ||
+                            lowerName.endsWith(".wav") || lowerName.endsWith(".flac") ||
+                            lowerName.endsWith(".aac") || lowerName.endsWith(".ogg")
+
+                    val isVideo = lowerName.endsWith(".mp4") || lowerName.endsWith(".mkv") ||
+                            lowerName.endsWith(".webm") || lowerName.endsWith(".avi") ||
+                            lowerName.endsWith(".mov")
+
+                    if (isAudio || isVideo) {
                         val cleanTitle = fileName
                             .substringBeforeLast(".")
                             .replace("_", " ")
@@ -1349,7 +1330,9 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                             lowerName.contains("wallen") -> "Morgan Wallen"
                             lowerName.contains("biohazard") -> "Biohazard"
                             lowerName.contains("nofx") -> "NOFX"
-                            else -> "Featured Artist"
+                            lowerName.contains("hatebreed") -> "Hatebreed"
+                            lowerName.contains("mudvayne") -> "Mudvayne"
+                            else -> if (isVideo) "Video Storage" else "Featured Artist"
                         }
 
                         val parsedAlbum = when {
@@ -1358,21 +1341,28 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                             lowerName.contains("wallen") -> "One Thing At A Time"
                             lowerName.contains("biohazard") -> "Kill Or Be Killed"
                             lowerName.contains("nofx") -> "The Decline"
-                            else -> "GitHub Storage"
+                            else -> if (isVideo) "GitHub Video" else "GitHub Storage"
                         }
 
-                        fetchedAudioSongs.add(
+                        // Determine exact matching artwork/thumbnail:
+                        val matchedArt = imageMap[baseName]
+                            ?: imageMap.entries.firstOrNull { (imgKey, _) -> lowerName.contains(imgKey) || imgKey.contains(baseName) }?.value
+                            ?: defaultIsolatedArtworkUrl
+                            ?: "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Folder.jpg"
+
+                        fetchedMediaList.add(
                             Song(
                                 title = cleanTitle,
                                 artist = parsedArtist,
                                 album = parsedAlbum,
                                 url = downloadUrl,
-                                artworkUrl = isolatedArtworkUrl ?: "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Folder.jpg"
+                                artworkUrl = matchedArt,
+                                isVideo = isVideo
                             )
                         )
                     }
                 }
-                Pair(fetchedAudioSongs, isolatedArtworkUrl)
+                Pair(fetchedMediaList, defaultIsolatedArtworkUrl)
             } else {
                 Pair(emptyList(), null)
             }
@@ -1383,141 +1373,7 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
     }
 }
 
-fun isHalloweenSeasonActive(): Boolean = isHalloweenPumpkinActive()
 
-@Composable
-fun SpookyFloatingParticlesOverlay() {
-    if (!isHalloweenSeasonActive()) return
-
-    val infiniteTransition = rememberInfiniteTransition(label = "SpookyFloat")
-    val floatAnim by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(10000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "spookyFloat"
-    )
-
-    val swayAnim by infiniteTransition.animateFloat(
-        initialValue = -25f,
-        targetValue = 25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "spookySway"
-    )
-
-    val bloodPulse by infiniteTransition.animateFloat(
-        initialValue = 0.05f,
-        targetValue = 0.22f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bloodPulse"
-    )
-
-    // Blood-Red & Spooky Purple Ambient Fog Layer
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                androidx.compose.ui.graphics.Brush.radialGradient(
-                    colors = listOf(
-                        Color(0xFFFF0033).copy(alpha = bloodPulse),
-                        Color(0xFF8A2BE2).copy(alpha = bloodPulse * 0.6f),
-                        Color.Transparent
-                    )
-                )
-            )
-    )
-
-    val spookyEntities = listOf("🎃", "👻", "🦇", "🕷️", "💀", "🧛", "🩸", "🕸️", "🎃", "👻", "🦇", "💀")
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        spookyEntities.forEachIndexed { idx, emoji ->
-            val xOffset = ((idx * 80 + 20) % 360).dp + (swayAnim * (if (idx % 2 == 0) 1f else -1f)).dp
-            val yProgress = (floatAnim + (idx * 0.08f)) % 1.0f
-
-            Text(
-                text = emoji,
-                fontSize = (24 + (idx % 4) * 6).sp,
-                modifier = Modifier
-                    .offset(x = xOffset, y = (yProgress * 850).dp)
-                    .graphicsLayer {
-                        alpha = (1.0f - yProgress).coerceIn(0.15f, 0.85f)
-                        rotationZ = swayAnim * (if (idx % 2 == 0) 0.5f else -0.5f)
-                    }
-            )
-        }
-    }
-}
-
-@Composable
-fun DrippingBloodTabOverlay() {
-    val infiniteTransition = rememberInfiniteTransition(label = "BloodDrip")
-    val dripProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "dripProgress"
-    )
-
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(20.dp)
-    ) {
-        val w = size.width
-        val bloodColor = Color(0xFFCC0000)
-        val darkBloodColor = Color(0xFF880E4F)
-
-        val bloodPath = androidx.compose.ui.graphics.Path().apply {
-            moveTo(0f, 0f)
-            lineTo(w, 0f)
-            lineTo(w, 6f)
-
-            val dripPoints = listOf(
-                0.05f to 12f, 0.12f to 22f, 0.18f to 8f, 0.25f to 18f,
-                0.32f to 10f, 0.40f to 24f, 0.48f to 12f, 0.55f to 20f,
-                0.62f to 9f, 0.70f to 22f, 0.78f to 11f, 0.85f to 19f,
-                0.92f to 8f, 0.98f to 15f
-            )
-
-            dripPoints.forEach { (xRatio, dripLen) ->
-                val x = w * xRatio
-                lineTo(x - 4f, 6f)
-                quadraticTo(x, dripLen + 4f, x + 4f, 6f)
-            }
-            lineTo(w, 0f)
-            close()
-        }
-
-        drawPath(bloodPath, color = bloodColor)
-
-        val dropRatios = listOf(0.12f, 0.40f, 0.70f, 0.85f)
-        dropRatios.forEachIndexed { idx, ratio ->
-            val dropX = w * ratio
-            val startY = 18f
-            val maxDrip = 35f
-            val dropProgress = (dripProgress + (idx * 0.25f)) % 1.0f
-            val currentY = startY + (dropProgress * maxDrip)
-            val dropAlpha = (1.0f - dropProgress).coerceIn(0f, 1f)
-
-            drawCircle(
-                color = darkBloodColor.copy(alpha = dropAlpha),
-                radius = 3.5f * dropAlpha,
-                center = Offset(dropX, currentY)
-            )
-        }
-    }
-}
 
 @Composable
 fun MisfitsMovieIntroSplash(onFinished: () -> Unit) {
@@ -1652,14 +1508,14 @@ fun MaskedSkullSplashScreenReveal(
 }
 
 @Composable
-fun ScaryPumpkinPlayPauseButton(
+fun TurkeyPlayPauseButton(
     isPlaying: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
-            .size(84.dp)
+            .size(86.dp)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -1667,73 +1523,153 @@ fun ScaryPumpkinPlayPauseButton(
             val w = size.width
             val h = size.height
 
-            // Green Stem
-            val stemPath = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.46f, h * 0.18f)
-                lineTo(w * 0.50f, h * 0.05f)
-                lineTo(w * 0.58f, h * 0.07f)
-                lineTo(w * 0.54f, h * 0.20f)
-                close()
-            }
-            drawPath(stemPath, color = Color(0xFF2E7D32))
-
-            // Orange Pumpkin Body
-            val pumpkinColor = Color(0xFFFF6F00)
-            val shadowColor = Color(0xFFE65100)
-
-            drawOval(
-                color = shadowColor,
-                topLeft = androidx.compose.ui.geometry.Offset(w * 0.08f, h * 0.18f),
-                size = androidx.compose.ui.geometry.Size(w * 0.84f, h * 0.72f)
+            // 1. Festive Autumn Feather Fan (Red, Dark Orange, Gold, Brown)
+            val featherColors = listOf(
+                Color(0xFFB22222),
+                Color(0xFFFF8C00),
+                Color(0xFFFFD700),
+                Color(0xFF8B4513),
+                Color(0xFFFF4500)
             )
-            drawOval(
-                color = pumpkinColor,
-                topLeft = androidx.compose.ui.geometry.Offset(w * 0.22f, h * 0.16f),
-                size = androidx.compose.ui.geometry.Size(w * 0.56f, h * 0.76f)
+            val totalFeathers = 7
+            for (i in 0 until totalFeathers) {
+                val angleRad = Math.toRadians(-120.0 + (i * 40.0)).toFloat()
+                val color = featherColors[i % featherColors.size]
+                val featherPath = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(w * 0.5f, h * 0.55f)
+                    val tipX = w * 0.5f + (Math.cos(angleRad.toDouble()) * w * 0.44f).toFloat()
+                    val tipY = h * 0.55f + (Math.sin(angleRad.toDouble()) * h * 0.44f).toFloat()
+                    quadraticTo(
+                        w * 0.5f + (Math.cos((angleRad - 0.2).toDouble()) * w * 0.35f).toFloat(),
+                        h * 0.55f + (Math.sin((angleRad - 0.2).toDouble()) * h * 0.35f).toFloat(),
+                        tipX, tipY
+                    )
+                    quadraticTo(
+                        w * 0.5f + (Math.cos((angleRad + 0.2).toDouble()) * w * 0.35f).toFloat(),
+                        h * 0.55f + (Math.sin((angleRad + 0.2).toDouble()) * h * 0.35f).toFloat(),
+                        w * 0.5f, h * 0.55f
+                    )
+                    close()
+                }
+                drawPath(featherPath, color = color)
+            }
+
+            // 2. Turkey Body
+            drawCircle(
+                color = Color(0xFF4A2E16),
+                radius = w * 0.28f,
+                center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.58f)
             )
 
-            // Scary Eyes
-            val eyeColor = if (isPlaying) Color(0xFFFFFF00) else Color(0xFF111111)
-            val eyePathLeft = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.28f, h * 0.36f)
-                lineTo(w * 0.40f, h * 0.36f)
-                lineTo(w * 0.34f, h * 0.48f)
+            // 3. Turkey Head & Beak
+            drawCircle(
+                color = Color(0xFF5D4037),
+                radius = w * 0.16f,
+                center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.35f)
+            )
+            val beakPath = androidx.compose.ui.graphics.Path().apply {
+                moveTo(w * 0.45f, h * 0.37f)
+                lineTo(w * 0.55f, h * 0.37f)
+                lineTo(w * 0.50f, h * 0.45f)
                 close()
             }
-            drawPath(eyePathLeft, color = eyeColor)
+            drawPath(beakPath, color = Color(0xFFFFD700))
 
-            val eyePathRight = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.60f, h * 0.36f)
-                lineTo(w * 0.72f, h * 0.36f)
-                lineTo(w * 0.66f, h * 0.48f)
-                close()
-            }
-            drawPath(eyePathRight, color = eyeColor)
+            // Wattle
+            drawCircle(
+                color = Color(0xFFD32F2F),
+                radius = w * 0.04f,
+                center = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.44f)
+            )
 
-            // Scary Jagged Mouth
-            val mouthPath = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.26f, h * 0.62f)
-                lineTo(w * 0.36f, h * 0.72f)
-                lineTo(w * 0.44f, h * 0.64f)
-                lineTo(w * 0.50f, h * 0.74f)
-                lineTo(w * 0.56f, h * 0.64f)
-                lineTo(w * 0.64f, h * 0.72f)
-                lineTo(w * 0.74f, h * 0.62f)
-                lineTo(w * 0.66f, h * 0.82f)
-                lineTo(w * 0.50f, h * 0.86f)
-                lineTo(w * 0.34f, h * 0.82f)
-                close()
-            }
-            drawPath(mouthPath, color = eyeColor)
+            // Eyes
+            drawCircle(color = Color.White, radius = w * 0.035f, center = androidx.compose.ui.geometry.Offset(w * 0.43f, h * 0.31f))
+            drawCircle(color = Color.Black, radius = w * 0.018f, center = androidx.compose.ui.geometry.Offset(w * 0.43f, h * 0.31f))
+            drawCircle(color = Color.White, radius = w * 0.035f, center = androidx.compose.ui.geometry.Offset(w * 0.57f, h * 0.31f))
+            drawCircle(color = Color.Black, radius = w * 0.018f, center = androidx.compose.ui.geometry.Offset(w * 0.57f, h * 0.31f))
         }
 
-        // Overlay Play/Pause Icon
-        Icon(
-            if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-            contentDescription = "Play/Pause",
-            modifier = Modifier.size(36.dp),
-            tint = if (isPlaying) Color.Black else Color.White
-        )
+        // Play / Pause Icon Overlay
+        Surface(
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = Color(0xFFFF8C00).copy(alpha = 0.95f),
+            modifier = Modifier.size(38.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    modifier = Modifier.size(26.dp),
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ThanksgivingSidePreviousButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.CircleShape,
+        color = Color(0xFFD35400).copy(alpha = 0.95f),
+        modifier = modifier.size(54.dp),
+        tonalElevation = 6.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "🥧",
+                    fontSize = 18.sp
+                )
+                Spacer(modifier = Modifier.width(1.dp))
+                Icon(
+                    Icons.Default.SkipPrevious,
+                    contentDescription = "Previous",
+                    modifier = Modifier.size(22.dp),
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ThanksgivingSideNextButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.CircleShape,
+        color = Color(0xFFF39C12).copy(alpha = 0.95f),
+        modifier = modifier.size(54.dp),
+        tonalElevation = 6.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.SkipNext,
+                    contentDescription = "Next",
+                    modifier = Modifier.size(22.dp),
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(1.dp))
+                Text(
+                    text = "🌽",
+                    fontSize = 18.sp
+                )
+            }
+        }
     }
 }
 
