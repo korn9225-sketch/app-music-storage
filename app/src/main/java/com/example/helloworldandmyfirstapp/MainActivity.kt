@@ -70,6 +70,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.zIndex
@@ -1074,6 +1076,92 @@ fun ZuneNeonAudioSpectrum(isPlaying: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+fun ZuneVinylArtwork(
+    artworkUrl: String?,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "VinylSpin")
+    val spinRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spinRotation"
+    )
+
+    val slideOffset by animateDpAsState(
+        targetValue = if (isPlaying) 52.dp else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "vinylSlide"
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.size(280.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(x = slideOffset)
+                .size(230.dp)
+                .graphicsLayer { rotationZ = if (isPlaying) spinRotation else 0f }
+                .clip(CircleShape)
+                .background(Color(0xFF111116))
+                .border(2.dp, Color(0xFF252530), CircleShape)
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val radius = size.minDimension / 2
+                drawCircle(color = Color.White.copy(alpha = 0.08f), radius = radius * 0.92f, style = Stroke(width = 1f))
+                drawCircle(color = Color.White.copy(alpha = 0.06f), radius = radius * 0.78f, style = Stroke(width = 1f))
+                drawCircle(color = Color.White.copy(alpha = 0.05f), radius = radius * 0.62f, style = Stroke(width = 1f))
+                drawCircle(color = Color.White.copy(alpha = 0.04f), radius = radius * 0.46f, style = Stroke(width = 1f))
+            }
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .align(Alignment.Center)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE5007D))
+                    .border(2.dp, Color.White.copy(alpha = 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = artworkUrl ?: R.drawable.kornimage,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black)
+                        .border(1.dp, Color.Gray, CircleShape)
+                )
+            }
+        }
+
+        Surface(
+            modifier = Modifier
+                .size(230.dp)
+                .offset(x = (-22).dp)
+                .border(1.dp, Color.White.copy(alpha = 0.2f)),
+            color = Color(0xFF181822),
+            tonalElevation = 8.dp
+        ) {
+            AsyncImage(
+                model = artworkUrl ?: R.drawable.kornimage,
+                contentDescription = "Album Art",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerView(
@@ -1204,13 +1292,9 @@ fun PlayerView(
                             }
                         } else {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                AsyncImage(
-                                    model = song?.getVerifiedArtworkUrl() ?: R.drawable.kornimage,
-                                    contentDescription = "Album Art",
-                                    modifier = Modifier
-                                        .size(260.dp)
-                                        .border(0.5.dp, Color.White.copy(alpha = 0.1f)),
-                                    contentScale = ContentScale.Crop
+                                ZuneVinylArtwork(
+                                    artworkUrl = song?.getVerifiedArtworkUrl(),
+                                    isPlaying = isPlaying
                                 )
                             }
                         }
