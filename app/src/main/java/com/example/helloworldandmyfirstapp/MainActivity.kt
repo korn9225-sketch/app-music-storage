@@ -1293,6 +1293,7 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                     .substringBeforeLast(".")
                     .replace("_", " ")
                     .replace("-", " ")
+                    .replace(Regex("^\\d+[.\\s_-]*"), "")
                     .trim()
 
                 val parsedArtist = when {
@@ -1303,6 +1304,7 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                     lowerName.contains("nofx") -> "NOFX"
                     lowerName.contains("hatebreed") -> "Hatebreed"
                     lowerName.contains("mudvayne") -> "Mudvayne"
+                    lowerName.contains("constantine") -> "Warner Bros"
                     else -> if (isVideo) "Video Storage" else "Featured Artist"
                 }
 
@@ -1310,15 +1312,18 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                     lowerName.contains("danny") -> "Dollerz Make Sense"
                     lowerName.contains("korn") -> "Follow the Leader"
                     lowerName.contains("wallen") -> "One Thing At A Time"
-                    lowerName.contains("biohazard") -> "Kill Or Be Killed"
+                    lowerName.contains("uncivilization") -> "Uncivilization"
+                    lowerName.contains("biohazard") || lowerName.contains("world.on.fire") || lowerName.contains("kill.or.be.killed") -> "Kill Or Be Killed"
                     lowerName.contains("nofx") -> "The Decline"
-                    else -> if (isVideo) "GitHub Video" else "GitHub Storage"
+                    lowerName.contains("hatebreed") -> "Live Dominance"
+                    lowerName.contains("mudvayne") -> "v2.0 Beta"
+                    lowerName.contains("constantine") -> "Movie"
+                    else -> if (isVideo) "Video Single" else "Single"
                 }
 
-                val matchedArt = imageMap[baseName]
-                    ?: imageMap.entries.firstOrNull { (imgKey, _) -> lowerName.contains(imgKey) || imgKey.contains(baseName) }?.value
-                    ?: defaultIsolatedArtworkUrl
-                    ?: "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Folder.jpg"
+                // ONLY use imageMap if there is a DIRECT matching image file with the same filename prefix.
+                // Otherwise leave empty so Song.getVerifiedArtworkUrl() dynamically resolves correct high-res album covers!
+                val matchedArt = imageMap[baseName] ?: ""
 
                 fetchedMediaList.add(
                     Song(
