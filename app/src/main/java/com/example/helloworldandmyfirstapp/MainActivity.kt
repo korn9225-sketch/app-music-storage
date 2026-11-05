@@ -698,19 +698,26 @@ class MainActivity : ComponentActivity() {
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(24.dp)
+                                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                                             ) {
                                                 MusicSubTab.entries.forEach { subTab ->
-                                                    Text(
-                                                        text = subTab.title,
-                                                        modifier = Modifier.clickable { selectedMusicSubTab = subTab },
-                                                        style = MaterialTheme.typography.titleLarge.copy(
-                                                            fontWeight = if (selectedMusicSubTab == subTab) FontWeight.Bold else FontWeight.Normal,
-                                                            fontSize = 24.sp
-                                                        ),
-                                                        color = if (selectedMusicSubTab == subTab) Color(0xFFE5007D) else Color.White.copy(alpha = 0.4f)
-                                                    )
+                                                    val isSelected = selectedMusicSubTab == subTab
+                                                    Surface(
+                                                        onClick = { selectedMusicSubTab = subTab },
+                                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                                        color = if (isSelected) Color(0xFFE5007D) else Color(0xFF1E1E26),
+                                                        tonalElevation = if (isSelected) 4.dp else 0.dp
+                                                    ) {
+                                                        Text(
+                                                            text = subTab.title.replaceFirstChar { it.uppercase() },
+                                                            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                            ),
+                                                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -1890,39 +1897,73 @@ fun ColorRow(selectedColor: Color, onColorSelect: (Color) -> Unit) {
 @Composable
 fun SongList(songs: List<Song>, onSongClick: (Int) -> Unit, onDownloadClick: (Song) -> Unit) {
     val context = LocalContext.current
+    val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 300.dp),
-        modifier = Modifier.fillMaxSize()
+        columns = GridCells.Adaptive(minSize = 340.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        itemsIndexedGrid(songs) { index, song ->
+        itemsIndexedGrid(audioSongs) { index, song ->
             val fileName = song.url.substringAfterLast("/")
             val isDownloaded = remember(song.url) { 
                 File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName).exists() 
             }
             
-            ListItem(
-                headlineContent = { Text(song.title) },
-                supportingContent = { Text("${song.artist} • ${song.album}") },
-                leadingContent = {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { 
+                        val actualIndex = songs.indexOf(song)
+                        onSongClick(if (actualIndex != -1) actualIndex else index) 
+                    },
+                color = Color(0xFF141418),
+                tonalElevation = 2.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     AsyncImage(
                         model = song.getVerifiedArtworkUrl(),
                         contentDescription = null,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
                     )
-                },
-                trailingContent = {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "${song.artist} • ${song.album}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                     if (!song.url.startsWith("content://")) {
                         IconButton(onClick = { onDownloadClick(song) }) {
                             Icon(
                                 imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
                                 contentDescription = "Download",
-                                tint = if (isDownloaded) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                                tint = if (isDownloaded) Color(0xFFE5007D) else Color.White.copy(alpha = 0.5f)
                             )
                         }
                     }
-                },
-                modifier = Modifier.clickable { onSongClick(index) }
-            )
+                }
+            }
         }
     }
 }
@@ -1932,8 +1973,10 @@ fun VideoList(songs: List<Song>, onDownloadClick: (Song) -> Unit, onVideoClick: 
     val context = LocalContext.current
     val videos = remember(songs) { songs.filter { it.isVideo } }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 250.dp),
-        modifier = Modifier.fillMaxSize()
+        columns = GridCells.Adaptive(minSize = 170.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(videos) { video ->
             val fileName = video.url.substringAfterLast("/")
@@ -1941,30 +1984,78 @@ fun VideoList(songs: List<Song>, onDownloadClick: (Song) -> Unit, onVideoClick: 
                 File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName).exists() 
             }
 
-            ListItem(
-                headlineContent = { Text(video.title) },
-                supportingContent = { Text(video.artist) },
-                leadingContent = {
-                    AsyncImage(
-                        model = video.getVerifiedArtworkUrl(),
-                        contentDescription = null,
-                        modifier = Modifier.size(60.dp).clip(MaterialTheme.shapes.small),
-                        contentScale = ContentScale.Crop
-                    )
-                },
-                trailingContent = {
-                    if (!video.url.startsWith("content://")) {
-                        IconButton(onClick = { onDownloadClick(video) }) {
-                            Icon(
-                                imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
-                                contentDescription = "Download",
-                                tint = if (isDownloaded) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                            )
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { onVideoClick(video) },
+                color = Color(0xFF141418),
+                tonalElevation = 4.dp
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(115.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                    ) {
+                        AsyncImage(
+                            model = video.getVerifiedArtworkUrl(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(36.dp),
+                            shape = androidx.compose.foundation.shape.CircleShape,
+                            color = Color.Black.copy(alpha = 0.6f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = "Play Video",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
                     }
-                },
-                modifier = Modifier.clickable { onVideoClick(video) }
-            )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = video.title,
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = video.artist,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (!video.url.startsWith("content://")) {
+                            IconButton(onClick = { onDownloadClick(video) }, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
+                                    contentDescription = "Download",
+                                    tint = if (isDownloaded) Color(0xFFE5007D) else Color.White.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1973,15 +2064,55 @@ fun VideoList(songs: List<Song>, onDownloadClick: (Song) -> Unit, onVideoClick: 
 fun ArtistList(songs: List<Song>, onArtistClick: (String) -> Unit) {
     val artists = remember(songs) { songs.map { it.artist }.distinct().sorted() }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 250.dp),
-        modifier = Modifier.fillMaxSize()
+        columns = GridCells.Adaptive(minSize = 110.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         items(artists) { artist ->
-            ListItem(
-                headlineContent = { Text(artist) },
-                leadingContent = { Icon(Icons.Default.Person, contentDescription = null) },
-                modifier = Modifier.clickable { onArtistClick(artist) }
-            )
+            val artistSongs = remember(artist, songs) { songs.filter { it.artist == artist } }
+            val firstSongArt = artistSongs.firstOrNull()?.getVerifiedArtworkUrl()
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { onArtistClick(artist) }
+                    .padding(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.size(96.dp),
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = Color(0xFF22222A),
+                    tonalElevation = 6.dp
+                ) {
+                    if (firstSongArt != null) {
+                        AsyncImage(
+                            model = firstSongArt,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().clip(androidx.compose.foundation.shape.CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(44.dp))
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = artist,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${artistSongs.size} tracks",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+            }
         }
     }
 }
@@ -1998,63 +2129,80 @@ fun ArtistDetailView(
     val artistSongs = remember(artist, songs) { songs.filter { it.artist == artist } }
     val albums = remember(artistSongs) { artistSongs.map { it.album }.distinct() }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).clickable { onBack() }
+            modifier = Modifier.padding(vertical = 12.dp).clickable { onBack() }
         ) {
-            Icon(Icons.Default.SkipPrevious, contentDescription = "Back")
+            Icon(Icons.Default.SkipPrevious, contentDescription = "Back", tint = Color(0xFFE5007D))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Back to Artists", style = MaterialTheme.typography.titleMedium)
+            Text("Back to Artists", style = MaterialTheme.typography.titleMedium, color = Color(0xFFE5007D))
         }
         
         Text(
             text = artist,
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(16.dp)
+            style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black),
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 12.dp)
         )
 
-        LazyColumn {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
-                Text("Albums", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
+                Text("Albums", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White, modifier = Modifier.padding(vertical = 4.dp))
             }
             items(albums) { album ->
-                ListItem(
-                    headlineContent = { Text(album) },
-                    leadingContent = { Icon(Icons.Default.Album, contentDescription = null) }
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
+                    color = Color(0xFF141418)
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Album, contentDescription = null, tint = Color(0xFFE5007D))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(album, style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    }
+                }
             }
             item {
-                Text("Songs", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(16.dp))
+                Text("Songs", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
             }
             items(artistSongs) { song ->
                 val fileName = song.url.substringAfterLast("/")
                 val isDownloaded = remember(song.url) { 
                     File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName).exists() 
                 }
-                ListItem(
-                    headlineContent = { Text(song.title) },
-                    supportingContent = { Text(song.album) },
-                    leadingContent = {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onSongClick(song) },
+                    color = Color(0xFF141418)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         AsyncImage(
                             model = song.getVerifiedArtworkUrl(),
                             contentDescription = null,
-                            modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small),
+                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop
                         )
-                    },
-                    trailingContent = {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(song.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            Text(song.album, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                        }
                         if (!song.url.startsWith("content://")) {
                             IconButton(onClick = { onDownloadClick(song) }) {
                                 Icon(
                                     imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
-                                    contentDescription = "Download"
+                                    contentDescription = "Download",
+                                    tint = if (isDownloaded) Color(0xFFE5007D) else Color.White.copy(alpha = 0.5f)
                                 )
                             }
                         }
-                    },
-                    modifier = Modifier.clickable { onSongClick(song) }
-                )
+                    }
+                }
             }
         }
     }
@@ -2064,15 +2212,51 @@ fun ArtistDetailView(
 fun AlbumList(songs: List<Song>, onAlbumClick: (String) -> Unit) {
     val albums = remember(songs) { songs.map { it.album }.distinct().sorted() }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 250.dp),
-        modifier = Modifier.fillMaxSize()
+        columns = GridCells.Adaptive(minSize = 140.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         items(albums) { album ->
-            ListItem(
-                headlineContent = { Text(album) },
-                leadingContent = { Icon(Icons.Default.Album, contentDescription = null) },
-                modifier = Modifier.clickable { onAlbumClick(album) }
-            )
+            val albumSongs = remember(album, songs) { songs.filter { it.album == album } }
+            val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
+            val artistName = albumSongs.firstOrNull()?.artist ?: ""
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { onAlbumClick(album) },
+                color = Color(0xFF141418),
+                tonalElevation = 4.dp
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    AsyncImage(
+                        model = albumArt,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(10.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = album,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = artistName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }
@@ -2087,53 +2271,66 @@ fun AlbumDetailView(
 ) {
     val context = LocalContext.current
     val albumSongs = remember(album, songs) { songs.filter { it.album == album } }
-    val albumArt = albumSongs.firstOrNull()?.artworkUrl
+    val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).clickable { onBack() }
+            modifier = Modifier.padding(vertical = 12.dp).clickable { onBack() }
         ) {
-            Icon(Icons.Default.SkipPrevious, contentDescription = "Back")
+            Icon(Icons.Default.SkipPrevious, contentDescription = "Back", tint = Color(0xFFE5007D))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Back to Albums", style = MaterialTheme.typography.titleMedium)
+            Text("Back to Albums", style = MaterialTheme.typography.titleMedium, color = Color(0xFFE5007D))
         }
 
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = albumArt,
                 contentDescription = null,
-                modifier = Modifier.size(100.dp).clip(MaterialTheme.shapes.medium),
+                modifier = Modifier.size(110.dp).clip(RoundedCornerShape(14.dp)),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = album, style = MaterialTheme.typography.headlineMedium)
-                Text(text = albumSongs.firstOrNull()?.artist ?: "", style = MaterialTheme.typography.titleMedium)
+                Text(text = album, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black), color = Color.White)
+                Text(text = albumSongs.firstOrNull()?.artist ?: "", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.7f))
+                Text(text = "${albumSongs.size} tracks", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.5f))
             }
         }
 
-        LazyColumn {
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(albumSongs) { song ->
                 val fileName = song.url.substringAfterLast("/")
                 val isDownloaded = remember(song.url) { 
                     File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName).exists() 
                 }
-                ListItem(
-                    headlineContent = { Text(song.title) },
-                    leadingContent = { Icon(Icons.Default.Audiotrack, contentDescription = null) },
-                    trailingContent = {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onSongClick(song) },
+                    color = Color(0xFF141418)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Audiotrack, contentDescription = null, tint = Color(0xFFE5007D), modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(song.title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color.White, modifier = Modifier.weight(1f))
                         if (!song.url.startsWith("content://")) {
                             IconButton(onClick = { onDownloadClick(song) }) {
                                 Icon(
                                     imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
-                                    contentDescription = "Download"
+                                    contentDescription = "Download",
+                                    tint = if (isDownloaded) Color(0xFFE5007D) else Color.White.copy(alpha = 0.5f)
                                 )
                             }
                         }
-                    },
-                    modifier = Modifier.clickable { onSongClick(song) }
-                )
+                    }
+                }
             }
         }
     }
@@ -2151,16 +2348,18 @@ fun BottomPlayerBar(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .height(64.dp)
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
-        color = Color.DarkGray.copy(alpha = 0.95f),
-        tonalElevation = 8.dp
+        color = Color(0xFF18181F),
+        tonalElevation = 10.dp
     ) {
         Column {
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(2.dp),
-                color = Color(0xFFFFA500),
+                modifier = Modifier.fillMaxWidth().height(3.dp),
+                color = Color(0xFFE5007D),
                 trackColor = Color.Transparent
             )
             Row(
@@ -2170,18 +2369,18 @@ fun BottomPlayerBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AsyncImage(
-                    model = song?.artworkUrl,
+                    model = song?.getVerifiedArtworkUrl(),
                     contentDescription = null,
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(MaterialTheme.shapes.small),
+                        .clip(RoundedCornerShape(10.dp)),
                     contentScale = ContentScale.Crop
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = song?.title ?: "No Song",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = song?.title ?: "No Song Selected",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -2189,18 +2388,16 @@ fun BottomPlayerBar(
                     Text(
                         text = song?.artist ?: "",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = Color.White.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onPlayPauseClick) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color.White
-                    )
-                }
+                TurkeyPlayPauseButton(
+                    isPlaying = isPlaying,
+                    onClick = onPlayPauseClick,
+                    modifier = Modifier.size(42.dp)
+                )
             }
         }
     }
