@@ -1879,7 +1879,7 @@ fun SettingsView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "v1.0 ZuneBeta09012026",
+                text = "v1.1 ZuneBeta11052026",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
