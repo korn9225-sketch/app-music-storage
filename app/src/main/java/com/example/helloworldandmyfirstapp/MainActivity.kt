@@ -1513,97 +1513,26 @@ fun TurkeyPlayPauseButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scaleAnim by animateFloatAsState(
+        targetValue = if (isPlaying) 1.12f else 1.0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "turkeyScale"
+    )
+
     Box(
         modifier = modifier
-            .size(86.dp)
+            .size(72.dp)
+            .graphicsLayer {
+                scaleX = scaleAnim
+                scaleY = scaleAnim
+            }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-
-            // 1. Festive Autumn Feather Fan (Red, Dark Orange, Gold, Brown)
-            val featherColors = listOf(
-                Color(0xFFB22222),
-                Color(0xFFFF8C00),
-                Color(0xFFFFD700),
-                Color(0xFF8B4513),
-                Color(0xFFFF4500)
-            )
-            val totalFeathers = 7
-            for (i in 0 until totalFeathers) {
-                val angleRad = Math.toRadians(-120.0 + (i * 40.0)).toFloat()
-                val color = featherColors[i % featherColors.size]
-                val featherPath = androidx.compose.ui.graphics.Path().apply {
-                    moveTo(w * 0.5f, h * 0.55f)
-                    val tipX = w * 0.5f + (Math.cos(angleRad.toDouble()) * w * 0.44f).toFloat()
-                    val tipY = h * 0.55f + (Math.sin(angleRad.toDouble()) * h * 0.44f).toFloat()
-                    quadraticTo(
-                        w * 0.5f + (Math.cos((angleRad - 0.2).toDouble()) * w * 0.35f).toFloat(),
-                        h * 0.55f + (Math.sin((angleRad - 0.2).toDouble()) * h * 0.35f).toFloat(),
-                        tipX, tipY
-                    )
-                    quadraticTo(
-                        w * 0.5f + (Math.cos((angleRad + 0.2).toDouble()) * w * 0.35f).toFloat(),
-                        h * 0.55f + (Math.sin((angleRad + 0.2).toDouble()) * h * 0.35f).toFloat(),
-                        w * 0.5f, h * 0.55f
-                    )
-                    close()
-                }
-                drawPath(featherPath, color = color)
-            }
-
-            // 2. Turkey Body
-            drawCircle(
-                color = Color(0xFF4A2E16),
-                radius = w * 0.28f,
-                center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.58f)
-            )
-
-            // 3. Turkey Head & Beak
-            drawCircle(
-                color = Color(0xFF5D4037),
-                radius = w * 0.16f,
-                center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.35f)
-            )
-            val beakPath = androidx.compose.ui.graphics.Path().apply {
-                moveTo(w * 0.45f, h * 0.37f)
-                lineTo(w * 0.55f, h * 0.37f)
-                lineTo(w * 0.50f, h * 0.45f)
-                close()
-            }
-            drawPath(beakPath, color = Color(0xFFFFD700))
-
-            // Wattle
-            drawCircle(
-                color = Color(0xFFD32F2F),
-                radius = w * 0.04f,
-                center = androidx.compose.ui.geometry.Offset(w * 0.47f, h * 0.44f)
-            )
-
-            // Eyes
-            drawCircle(color = Color.White, radius = w * 0.035f, center = androidx.compose.ui.geometry.Offset(w * 0.43f, h * 0.31f))
-            drawCircle(color = Color.Black, radius = w * 0.018f, center = androidx.compose.ui.geometry.Offset(w * 0.43f, h * 0.31f))
-            drawCircle(color = Color.White, radius = w * 0.035f, center = androidx.compose.ui.geometry.Offset(w * 0.57f, h * 0.31f))
-            drawCircle(color = Color.Black, radius = w * 0.018f, center = androidx.compose.ui.geometry.Offset(w * 0.57f, h * 0.31f))
-        }
-
-        // Play / Pause Icon Overlay
-        Surface(
-            shape = androidx.compose.foundation.shape.CircleShape,
-            color = Color(0xFFFF8C00).copy(alpha = 0.95f),
-            modifier = Modifier.size(38.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    modifier = Modifier.size(26.dp),
-                    tint = Color.White
-                )
-            }
-        }
+        Text(
+            text = "🦃",
+            fontSize = 52.sp
+        )
     }
 }
 
@@ -1612,31 +1541,16 @@ fun ThanksgivingSidePreviousButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        onClick = onClick,
-        shape = androidx.compose.foundation.shape.CircleShape,
-        color = Color(0xFFD35400).copy(alpha = 0.95f),
-        modifier = modifier.size(54.dp),
-        tonalElevation = 6.dp
+    Box(
+        modifier = modifier
+            .size(58.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "🥧",
-                    fontSize = 18.sp
-                )
-                Spacer(modifier = Modifier.width(1.dp))
-                Icon(
-                    Icons.Default.SkipPrevious,
-                    contentDescription = "Previous",
-                    modifier = Modifier.size(22.dp),
-                    tint = Color.White
-                )
-            }
-        }
+        Text(
+            text = "🥧",
+            fontSize = 44.sp
+        )
     }
 }
 
@@ -1645,31 +1559,16 @@ fun ThanksgivingSideNextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        onClick = onClick,
-        shape = androidx.compose.foundation.shape.CircleShape,
-        color = Color(0xFFF39C12).copy(alpha = 0.95f),
-        modifier = modifier.size(54.dp),
-        tonalElevation = 6.dp
+    Box(
+        modifier = modifier
+            .size(58.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    Icons.Default.SkipNext,
-                    contentDescription = "Next",
-                    modifier = Modifier.size(22.dp),
-                    tint = Color.White
-                )
-                Spacer(modifier = Modifier.width(1.dp))
-                Text(
-                    text = "🌽",
-                    fontSize = 18.sp
-                )
-            }
-        }
+        Text(
+            text = "🌽",
+            fontSize = 44.sp
+        )
     }
 }
 
