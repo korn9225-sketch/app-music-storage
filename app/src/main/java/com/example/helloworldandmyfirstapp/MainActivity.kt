@@ -473,16 +473,45 @@ class MainActivity : ComponentActivity() {
                 var selectedArtist by viewModel::selectedArtist
                 var selectedAlbum by viewModel::selectedAlbum
 
+                val tabHistory = remember { mutableStateListOf(MusicTab.NowPlaying) }
+
+                val selectTab: (MusicTab) -> Unit = { newTab ->
+                    if (selectedTab != newTab) {
+                        if (newTab == MusicTab.Music) {
+                            selectedArtist = null
+                            selectedAlbum = null
+                        }
+                        if (tabHistory.lastOrNull() != newTab) {
+                            tabHistory.add(newTab)
+                        }
+                        selectedTab = newTab
+                    }
+                }
+
+                val canGoBack = selectedArtist != null ||
+                        selectedAlbum != null ||
+                        selectedMusicSubTab != MusicSubTab.Songs ||
+                        tabHistory.size > 1 ||
+                        selectedTab != MusicTab.NowPlaying
+
                 val handleBackPress = {
                     when {
                         selectedArtist != null -> selectedArtist = null
                         selectedAlbum != null -> selectedAlbum = null
                         selectedMusicSubTab != MusicSubTab.Songs -> selectedMusicSubTab = MusicSubTab.Songs
+                        tabHistory.size > 1 -> {
+                            tabHistory.removeAt(tabHistory.lastIndex)
+                            selectedTab = tabHistory.last()
+                        }
                         selectedTab != MusicTab.NowPlaying -> selectedTab = MusicTab.NowPlaying
                         else -> {
-                            Toast.makeText(context, "Hold back to exit", Toast.LENGTH_SHORT).show()
+                            isExiting = true
                         }
                     }
+                }
+
+                BackHandler(enabled = canGoBack) {
+                    handleBackPress()
                 }
 
                 var backDownTime by remember { mutableLongStateOf(0L) }
@@ -604,11 +633,7 @@ class MainActivity : ComponentActivity() {
                                         Tab(
                                             selected = selectedTab == tab,
                                             onClick = { 
-                                                if (selectedTab == tab && tab == MusicTab.Music) {
-                                                    selectedArtist = null
-                                                    selectedAlbum = null
-                                                }
-                                                selectedTab = tab 
+                                                selectTab(tab)
                                             },
                                             text = { 
                                                 Text(
@@ -638,7 +663,7 @@ class MainActivity : ComponentActivity() {
                                 song = currentSong,
                                 isPlaying = isPlaying,
                                 onPlayPauseClick = { if (isPlaying) playerState?.pause() else playerState?.play() },
-                                onClick = { selectedTab = MusicTab.NowPlaying },
+                                onClick = { selectTab(MusicTab.NowPlaying) },
                                 progress = currentProgress
                             )
                         }
