@@ -1832,6 +1832,7 @@ fun SettingsView(
         // GitHub Auto-Updater Section
         var isCheckingUpdate by remember { mutableStateOf(false) }
         var updateStatusMessage by remember { mutableStateOf("") }
+        var latestApkUrl by remember { mutableStateOf<String?>(null) }
         val coroutineScope = rememberCoroutineScope()
         val context = LocalContext.current
 
@@ -1849,16 +1850,29 @@ fun SettingsView(
                     onClick = {
                         if (isCheckingUpdate) return@Button
                         isCheckingUpdate = true
-                        updateStatusMessage = "Checking GitHub for updates..."
+                        updateStatusMessage = "Checking GitHub releases..."
                         coroutineScope.launch {
-                            val update = GitHubAutoUpdater.checkForUpdates()
-                            if (update != null) {
-                                updateStatusMessage = "New update found: ${update.tagName}"
-                                GitHubAutoUpdater.downloadAndInstallUpdate(context, update.downloadUrl) { status ->
-                                    updateStatusMessage = status
+                            when (val result = GitHubAutoUpdater.checkForUpdatesResult()) {
+                                is UpdateCheckResult.NewUpdateAvailable -> {
+                                    latestApkUrl = result.downloadUrl
+                                    updateStatusMessage = "New update found: ${result.tagName}. Downloading..."
+                                    GitHubAutoUpdater.downloadAndInstallUpdate(context, result.downloadUrl) { status ->
+                                        updateStatusMessage = status
+                                    }
                                 }
-                            } else {
-                                updateStatusMessage = "App is up to date (${GitHubAutoUpdater.CURRENT_VERSION_TAG})"
+                                is UpdateCheckResult.UpToDate -> {
+                                    latestApkUrl = result.downloadUrl
+                                    updateStatusMessage = "App is up to date (${GitHubAutoUpdater.CURRENT_VERSION_TAG}). Latest release with APK: ${result.tagName}."
+                                }
+                                is UpdateCheckResult.NoApkFound -> {
+                                    latestApkUrl = null
+                                    val tag = result.tagName ?: "unknown"
+                                    updateStatusMessage = "No .apk file attached to GitHub release ($tag). Please upload an .apk asset to GitHub Releases."
+                                }
+                                is UpdateCheckResult.Error -> {
+                                    latestApkUrl = null
+                                    updateStatusMessage = "Update check failed: ${result.message}"
+                                }
                             }
                             isCheckingUpdate = false
                         }
@@ -1872,6 +1886,26 @@ fun SettingsView(
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text("Check for GitHub App Updates", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                if (latestApkUrl != null && !isCheckingUpdate) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            isCheckingUpdate = true
+                            updateStatusMessage = "Force downloading APK..."
+                            coroutineScope.launch {
+                                GitHubAutoUpdater.downloadAndInstallUpdate(context, latestApkUrl!!) { status ->
+                                    updateStatusMessage = status
+                                }
+                                isCheckingUpdate = false
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE5007D))
+                    ) {
+                        Text("Force Download & Reinstall APK", fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 if (updateStatusMessage.isNotBlank()) {
@@ -3102,19 +3136,20 @@ object FlashlightStrobeManager {
     }
 }
 
+sealed class UpdateCheckResult {
+    data class NewUpdateAvailable(val tagName: String, val downloadUrl: String, val body: String) : UpdateCheckResult()
+    data class UpToDate(val tagName: String, val downloadUrl: String?) : UpdateCheckResult()
+    data class NoApkFound(val tagName: String?) : UpdateCheckResult()
+    data class Error(val message: String) : UpdateCheckResult()
+}
+
 object GitHubAutoUpdater {
     const val CURRENT_VERSION_TAG = "v1.1"
 
-    data class UpdateInfo(
-        val tagName: String,
-        val downloadUrl: String,
-        val body: String
-    )
-
-    suspend fun checkForUpdates(): UpdateInfo? {
+    suspend fun checkForUpdatesResult(): UpdateCheckResult {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/releases/latest")
+                val url = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/releases")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "GET"
                 conn.setRequestProperty("User-Agent", "ZuneMusicPlayer/1.0")
@@ -3125,31 +3160,57 @@ object GitHubAutoUpdater {
                 conn.connectTimeout = 8000
                 conn.readTimeout = 8000
 
-                if (conn.responseCode == 200) {
-                    val jsonStr = conn.inputStream.bufferedReader().readText()
-                    val obj = JSONObject(jsonStr)
-                    val tagName = obj.optString("tag_name", "")
-                    val body = obj.optString("body", "")
-                    val assets = obj.optJSONArray("assets") ?: return@withContext null
+                val code = conn.responseCode
+                if (code == 403 || code == 429) {
+                    return@withContext UpdateCheckResult.Error("GitHub API rate limit exceeded (HTTP $code).")
+                } else if (code != 200) {
+                    return@withContext UpdateCheckResult.Error("GitHub server returned HTTP $code.")
+                }
 
-                    var apkUrl: String? = null
-                    for (i in 0 until assets.length()) {
-                        val asset = assets.getJSONObject(i)
+                val jsonStr = conn.inputStream.bufferedReader().readText()
+                val releasesArray = JSONArray(jsonStr)
+
+                if (releasesArray.length() == 0) {
+                    return@withContext UpdateCheckResult.NoApkFound(null)
+                }
+
+                var newestTagName: String? = null
+                var newestApkUrl: String? = null
+                var newestBody = ""
+
+                for (i in 0 until releasesArray.length()) {
+                    val rel = releasesArray.getJSONObject(i)
+                    val tagName = rel.optString("tag_name", "")
+                    val body = rel.optString("body", "")
+                    val assets = rel.optJSONArray("assets") ?: continue
+
+                    for (j in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(j)
                         val name = asset.optString("name", "")
                         if (name.endsWith(".apk", ignoreCase = true)) {
-                            apkUrl = asset.optString("browser_download_url", "")
+                            newestTagName = tagName
+                            newestApkUrl = asset.optString("browser_download_url", "")
+                            newestBody = body
                             break
                         }
                     }
+                    if (newestApkUrl != null) break
+                }
 
-                    if (!apkUrl.isNullOrBlank() && isNewerVersion(tagName, CURRENT_VERSION_TAG)) {
-                        return@withContext UpdateInfo(tagName, apkUrl, body)
-                    }
+                if (newestApkUrl == null) {
+                    val latestTag = releasesArray.getJSONObject(0).optString("tag_name", "latest")
+                    return@withContext UpdateCheckResult.NoApkFound(latestTag)
+                }
+
+                val isNewer = isNewerVersion(newestTagName!!, CURRENT_VERSION_TAG)
+                if (isNewer) {
+                    return@withContext UpdateCheckResult.NewUpdateAvailable(newestTagName, newestApkUrl, newestBody)
+                } else {
+                    return@withContext UpdateCheckResult.UpToDate(newestTagName, newestApkUrl)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                return@withContext UpdateCheckResult.Error(e.localizedMessage ?: "Unknown error")
             }
-            null
         }
     }
 
