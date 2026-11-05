@@ -1263,113 +1263,133 @@ fun PlayerView(
 
 suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
     return withContext(Dispatchers.IO) {
+        val fetchedMediaList = mutableListOf<Song>()
+        val imageMap = mutableMapOf<String, String>()
+        var defaultIsolatedArtworkUrl: String? = null
+
+        fun processRawFile(fileName: String, downloadUrl: String) {
+            if (fileName.isEmpty() || downloadUrl.isEmpty()) return
+            val lowerName = fileName.lowercase()
+            val baseName = fileName.substringBeforeLast(".").lowercase()
+
+            if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png") || lowerName.endsWith(".webp")) {
+                imageMap[baseName] = downloadUrl
+                if (defaultIsolatedArtworkUrl == null) {
+                    defaultIsolatedArtworkUrl = downloadUrl
+                }
+                return
+            }
+
+            val isAudio = lowerName.endsWith(".mp3") || lowerName.endsWith(".m4a") ||
+                    lowerName.endsWith(".wav") || lowerName.endsWith(".flac") ||
+                    lowerName.endsWith(".aac") || lowerName.endsWith(".ogg")
+
+            val isVideo = lowerName.endsWith(".mp4") || lowerName.endsWith(".mkv") ||
+                    lowerName.endsWith(".webm") || lowerName.endsWith(".avi") ||
+                    lowerName.endsWith(".mov")
+
+            if (isAudio || isVideo) {
+                val cleanTitle = fileName
+                    .substringBeforeLast(".")
+                    .replace("_", " ")
+                    .replace("-", " ")
+                    .trim()
+
+                val parsedArtist = when {
+                    lowerName.contains("danny") -> "Danny Diablo"
+                    lowerName.contains("korn") -> "Korn"
+                    lowerName.contains("wallen") -> "Morgan Wallen"
+                    lowerName.contains("biohazard") -> "Biohazard"
+                    lowerName.contains("nofx") -> "NOFX"
+                    lowerName.contains("hatebreed") -> "Hatebreed"
+                    lowerName.contains("mudvayne") -> "Mudvayne"
+                    else -> if (isVideo) "Video Storage" else "Featured Artist"
+                }
+
+                val parsedAlbum = when {
+                    lowerName.contains("danny") -> "Dollerz Make Sense"
+                    lowerName.contains("korn") -> "Follow the Leader"
+                    lowerName.contains("wallen") -> "One Thing At A Time"
+                    lowerName.contains("biohazard") -> "Kill Or Be Killed"
+                    lowerName.contains("nofx") -> "The Decline"
+                    else -> if (isVideo) "GitHub Video" else "GitHub Storage"
+                }
+
+                val matchedArt = imageMap[baseName]
+                    ?: imageMap.entries.firstOrNull { (imgKey, _) -> lowerName.contains(imgKey) || imgKey.contains(baseName) }?.value
+                    ?: defaultIsolatedArtworkUrl
+                    ?: "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Folder.jpg"
+
+                fetchedMediaList.add(
+                    Song(
+                        title = cleanTitle,
+                        artist = parsedArtist,
+                        album = parsedAlbum,
+                        url = downloadUrl,
+                        artworkUrl = matchedArt,
+                        isVideo = isVideo
+                    )
+                )
+            }
+        }
+
+        // 1. Fetch GitHub Releases Assets (v1.0, v2.0beta, and any future release tags)
         try {
-            val url = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/contents")
-            val conn = url.openConnection() as HttpURLConnection
+            val relUrl = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/releases")
+            val conn = relUrl.openConnection() as HttpURLConnection
             conn.requestMethod = "GET"
             if (PlaybackService.GITHUB_TOKEN.isNotBlank()) {
                 conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
             }
             conn.setRequestProperty("Accept", "application/vnd.github+json")
-            conn.connectTimeout = 10000
-            conn.readTimeout = 10000
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+
+            if (conn.responseCode == 200) {
+                val jsonStr = conn.inputStream.bufferedReader().readText()
+                val releasesArray = JSONArray(jsonStr)
+                for (r in 0 until releasesArray.length()) {
+                    val releaseObj = releasesArray.getJSONObject(r)
+                    val assetsArray = releaseObj.optJSONArray("assets") ?: continue
+                    for (a in 0 until assetsArray.length()) {
+                        val assetObj = assetsArray.getJSONObject(a)
+                        val assetName = assetObj.optString("name", "")
+                        val assetUrl = assetObj.optString("browser_download_url", "")
+                        processRawFile(assetName, assetUrl)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 2. Fetch Repository Contents (Files/Folders)
+        try {
+            val contentsUrl = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/contents")
+            val conn = contentsUrl.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            if (PlaybackService.GITHUB_TOKEN.isNotBlank()) {
+                conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+            }
+            conn.setRequestProperty("Accept", "application/vnd.github+json")
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
 
             if (conn.responseCode == 200) {
                 val jsonStr = conn.inputStream.bufferedReader().readText()
                 val jsonArray = JSONArray(jsonStr)
-
-                val imageMap = mutableMapOf<String, String>()
-                var defaultIsolatedArtworkUrl: String? = null
-                val fetchedMediaList = mutableListOf<Song>()
-
-                // Pass 1: Collect image files for artwork/thumbnails
                 for (i in 0 until jsonArray.length()) {
                     val fileObj = jsonArray.getJSONObject(i)
                     val fileName = fileObj.optString("name", "")
                     val downloadUrl = fileObj.optString("download_url", "")
-                    if (fileName.isEmpty() || downloadUrl.isEmpty()) continue
-
-                    val lowerName = fileName.lowercase()
-                    if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png") || lowerName.endsWith(".webp")) {
-                        val baseName = fileName.substringBeforeLast(".").lowercase()
-                        imageMap[baseName] = downloadUrl
-                        if (defaultIsolatedArtworkUrl == null) {
-                            defaultIsolatedArtworkUrl = downloadUrl
-                        }
-                    }
+                    processRawFile(fileName, downloadUrl)
                 }
-
-                // Pass 2: Process Audio and Video files
-                for (i in 0 until jsonArray.length()) {
-                    val fileObj = jsonArray.getJSONObject(i)
-                    val fileName = fileObj.optString("name", "")
-                    val downloadUrl = fileObj.optString("download_url", "")
-                    if (fileName.isEmpty() || downloadUrl.isEmpty()) continue
-
-                    val lowerName = fileName.lowercase()
-                    val baseName = fileName.substringBeforeLast(".").lowercase()
-
-                    val isAudio = lowerName.endsWith(".mp3") || lowerName.endsWith(".m4a") ||
-                            lowerName.endsWith(".wav") || lowerName.endsWith(".flac") ||
-                            lowerName.endsWith(".aac") || lowerName.endsWith(".ogg")
-
-                    val isVideo = lowerName.endsWith(".mp4") || lowerName.endsWith(".mkv") ||
-                            lowerName.endsWith(".webm") || lowerName.endsWith(".avi") ||
-                            lowerName.endsWith(".mov")
-
-                    if (isAudio || isVideo) {
-                        val cleanTitle = fileName
-                            .substringBeforeLast(".")
-                            .replace("_", " ")
-                            .replace("-", " ")
-                            .trim()
-
-                        val parsedArtist = when {
-                            lowerName.contains("danny") -> "Danny Diablo"
-                            lowerName.contains("korn") -> "Korn"
-                            lowerName.contains("wallen") -> "Morgan Wallen"
-                            lowerName.contains("biohazard") -> "Biohazard"
-                            lowerName.contains("nofx") -> "NOFX"
-                            lowerName.contains("hatebreed") -> "Hatebreed"
-                            lowerName.contains("mudvayne") -> "Mudvayne"
-                            else -> if (isVideo) "Video Storage" else "Featured Artist"
-                        }
-
-                        val parsedAlbum = when {
-                            lowerName.contains("danny") -> "Dollerz Make Sense"
-                            lowerName.contains("korn") -> "Follow the Leader"
-                            lowerName.contains("wallen") -> "One Thing At A Time"
-                            lowerName.contains("biohazard") -> "Kill Or Be Killed"
-                            lowerName.contains("nofx") -> "The Decline"
-                            else -> if (isVideo) "GitHub Video" else "GitHub Storage"
-                        }
-
-                        // Determine exact matching artwork/thumbnail:
-                        val matchedArt = imageMap[baseName]
-                            ?: imageMap.entries.firstOrNull { (imgKey, _) -> lowerName.contains(imgKey) || imgKey.contains(baseName) }?.value
-                            ?: defaultIsolatedArtworkUrl
-                            ?: "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Folder.jpg"
-
-                        fetchedMediaList.add(
-                            Song(
-                                title = cleanTitle,
-                                artist = parsedArtist,
-                                album = parsedAlbum,
-                                url = downloadUrl,
-                                artworkUrl = matchedArt,
-                                isVideo = isVideo
-                            )
-                        )
-                    }
-                }
-                Pair(fetchedMediaList, defaultIsolatedArtworkUrl)
-            } else {
-                Pair(emptyList(), null)
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Pair(emptyList(), null)
         }
+
+        Pair(fetchedMediaList.distinctBy { it.url }, defaultIsolatedArtworkUrl)
     }
 }
 
