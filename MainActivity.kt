@@ -30,6 +30,11 @@ import androidx.core.content.edit
 import android.app.DownloadManager
 import android.os.Environment
 import java.io.File
+import java.net.URL
+import java.net.HttpURLConnection
+import org.json.JSONArray
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.filled.Download
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
@@ -403,6 +408,13 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     viewModel.initController(context, songs)
+
+                    val (fetchedSongs, _) = fetchRepoSongsFromGitHub()
+                    fetchedSongs.forEach { newSong ->
+                        if (songs.none { it.url == newSong.url }) {
+                            songs.add(newSong)
+                        }
+                    }
                 }
 
                 LaunchedEffect(viewModel.player, viewModel.isPlaying) {
@@ -581,8 +593,9 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Column {
                                 Spacer(Modifier.windowInsetsPadding(WindowInsets.statusBars))
-                                PrimaryTabRow(
+                                PrimaryScrollableTabRow(
                                     selectedTabIndex = selectedTab.ordinal,
+                                    edgePadding = 8.dp,
                                     containerColor = Color.Black,
                                     contentColor = Color(0xFFE5007D),
                                     divider = {}
@@ -602,7 +615,7 @@ class MainActivity : ComponentActivity() {
                                                     text = tab.title,
                                                     style = MaterialTheme.typography.headlineMedium.copy(
                                                         fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal,
-                                                        fontSize = 24.sp,
+                                                        fontSize = 18.sp,
                                                         letterSpacing = (-1).sp
                                                     ),
                                                     color = if (selectedTab == tab) Color(0xFFE5007D) else Color.White.copy(alpha = 0.6f),
@@ -748,108 +761,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                        // Library content
-                        Column(modifier = Modifier.fillMaxSize().zIndex(1f)) {
-                            when (selectedTab) {
-                                MusicTab.NowPlaying -> PlayerView(
-                                    songs = songs,
-                                    currentSongIndex = currentSongIndex,
-                                    isPlaying = isPlaying,
-                                    currentPosition = currentPosition,
-                                    totalDuration = totalDuration,
-                                    playerState = playerState,
-                                    backgroundColor = Color.Black,
-                                    isStrobeEnabled = isStrobeEnabled,
-                                    onDownloadClick = onDownloadClick
-                                )
-                                MusicTab.Music -> {
-                                    Column {
-                                        if (selectedArtist == null && selectedAlbum == null) {
-                                            // Sub-tab Navigation
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(24.dp)
-                                            ) {
-                                                MusicSubTab.entries.forEach { subTab ->
-                                                    Text(
-                                                        text = subTab.title,
-                                                        modifier = Modifier.clickable { selectedMusicSubTab = subTab },
-                                                        style = MaterialTheme.typography.titleLarge.copy(
-                                                            fontWeight = if (selectedMusicSubTab == subTab) FontWeight.Bold else FontWeight.Normal,
-                                                            fontSize = 24.sp
-                                                        ),
-                                                        color = if (selectedMusicSubTab == subTab) Color(0xFFE5007D) else Color.White.copy(alpha = 0.4f)
-                                                    )
-                                                }
-                                            }
-
-                                            when (selectedMusicSubTab) {
-                                                MusicSubTab.Songs -> SongList(songs, onSongClick = { index ->
-                                                    playerState?.seekTo(index, 0L)
-                                                    playerState?.play()
-                                                    selectedTab = MusicTab.NowPlaying
-                                                }, onDownloadClick = onDownloadClick)
-                                                MusicSubTab.Artists -> ArtistList(songs, onArtistClick = { selectedArtist = it })
-                                                MusicSubTab.Albums -> AlbumList(songs, onAlbumClick = { selectedAlbum = it })
-                                            }
-                                        } else if (selectedArtist != null) {
-                                            ArtistDetailView(
-                                                artist = selectedArtist!!,
-                                                songs = songs,
-                                                onBack = { selectedArtist = null },
-                                                onSongClick = { song ->
-                                                    val index = songs.indexOf(song)
-                                                    if (index != -1) {
-                                                        playerState?.seekTo(index, 0L)
-                                                        playerState?.play()
-                                                        selectedTab = MusicTab.NowPlaying
-                                                    }
-                                                },
-                                                onDownloadClick = onDownloadClick
-                                            )
-                                        } else if (selectedAlbum != null) {
-                                            AlbumDetailView(
-                                                album = selectedAlbum!!,
-                                                songs = songs,
-                                                onBack = { selectedAlbum = null },
-                                                onSongClick = { song ->
-                                                    val index = songs.indexOf(song)
-                                                    if (index != -1) {
-                                                        playerState?.seekTo(index, 0L)
-                                                        playerState?.play()
-                                                        selectedTab = MusicTab.NowPlaying
-                                                    }
-                                                },
-                                                onDownloadClick = onDownloadClick
-                                            )
-                                        }
-                                    }
-                                }
-                                MusicTab.Video -> VideoList(songs, onDownloadClick = onDownloadClick) { song ->
-                                    val index = songs.indexOf(song)
-                                    if (index != -1) {
-                                        playerState?.seekTo(index, 0L)
-                                        playerState?.play()
-                                        selectedTab = MusicTab.NowPlaying
-                                    }
-                                }
-                                MusicTab.Settings -> SettingsView(
-                                    playerColor = playerBackgroundColor,
-                                    onPlayerColorChange = { playerBackgroundColor = it },
-                                    settingsColor = settingsBackgroundColor,
-                                    onSettingsColorChange = { settingsBackgroundColor = it },
-                                    isStrobeEnabled = isStrobeEnabled,
-                                    onStrobeToggle = { isStrobeEnabled = it },
-                                    strobeSpeedMs = strobeSpeedMs,
-                                    onStrobeSpeedChange = { strobeSpeedMs = it },
-                                    isBeatSyncEnabled = isBeatSyncEnabled,
-                                    onBeatSyncToggle = { isBeatSyncEnabled = it },
-                                    onAddLocalMusic = { songPickerLauncher.launch(arrayOf("*/*")) }
-                                )
-                            }
-                        }
+                
                     }
 
                 // CRT Scanlines Overlay
@@ -1388,6 +1300,87 @@ fun isHalloweenPumpkinActive(): Boolean {
         set(java.util.Calendar.MILLISECOND, 0)
     }
     return System.currentTimeMillis() < cutoffEst.timeInMillis
+}
+
+suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
+    return withContext(Dispatchers.IO) {
+        try {
+            val url = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/contents")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+            conn.setRequestProperty("Accept", "application/vnd.github+json")
+            conn.connectTimeout = 10000
+            conn.readTimeout = 10000
+
+            if (conn.responseCode == 200) {
+                val jsonStr = conn.inputStream.bufferedReader().readText()
+                val jsonArray = JSONArray(jsonStr)
+
+                var isolatedArtworkUrl: String? = null
+                val fetchedAudioSongs = mutableListOf<Song>()
+
+                for (i in 0 until jsonArray.length()) {
+                    val fileObj = jsonArray.getJSONObject(i)
+                    val fileName = fileObj.optString("name", "")
+                    val downloadUrl = fileObj.optString("download_url", "")
+
+                    if (fileName.isEmpty() || downloadUrl.isEmpty()) continue
+
+                    val lowerName = fileName.lowercase()
+
+                    // 1. ISOLATE IMAGE FILES (e.g. misfits_exact_skull.jpg) so they don't crash the media player!
+                    if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png")) {
+                        isolatedArtworkUrl = downloadUrl
+                        continue
+                    }
+
+                    // 2. FILTER MP3 & AUDIO FILES ONLY
+                    if (lowerName.endsWith(".mp3") || lowerName.endsWith(".m4a")) {
+                        val cleanTitle = fileName
+                            .substringBeforeLast(".")
+                            .replace("_", " ")
+                            .replace("-", " ")
+                            .trim()
+
+                        val parsedArtist = when {
+                            lowerName.contains("danny") -> "Danny Diablo"
+                            lowerName.contains("korn") -> "Korn"
+                            lowerName.contains("wallen") -> "Morgan Wallen"
+                            lowerName.contains("biohazard") -> "Biohazard"
+                            lowerName.contains("nofx") -> "NOFX"
+                            else -> "Featured Artist"
+                        }
+
+                        val parsedAlbum = when {
+                            lowerName.contains("danny") -> "Dollerz Make Sense"
+                            lowerName.contains("korn") -> "Follow the Leader"
+                            lowerName.contains("wallen") -> "One Thing At A Time"
+                            lowerName.contains("biohazard") -> "Kill Or Be Killed"
+                            lowerName.contains("nofx") -> "The Decline"
+                            else -> "GitHub Storage"
+                        }
+
+                        fetchedAudioSongs.add(
+                            Song(
+                                title = cleanTitle,
+                                artist = parsedArtist,
+                                album = parsedAlbum,
+                                url = downloadUrl,
+                                artworkUrl = isolatedArtworkUrl ?: "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Folder.jpg"
+                            )
+                        )
+                    }
+                }
+                Pair(fetchedAudioSongs, isolatedArtworkUrl)
+            } else {
+                Pair(emptyList(), null)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Pair(emptyList(), null)
+        }
+    }
 }
 
 fun isHalloweenSeasonActive(): Boolean = isHalloweenPumpkinActive()
