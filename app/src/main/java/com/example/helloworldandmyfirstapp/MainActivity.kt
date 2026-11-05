@@ -3215,10 +3215,8 @@ object GitHubAutoUpdater {
                 conn.readTimeout = 8000
 
                 val code = conn.responseCode
-                if (code == 403 || code == 429) {
-                    return@withContext UpdateCheckResult.Error("GitHub API rate limit exceeded (HTTP $code).")
-                } else if (code != 200) {
-                    return@withContext UpdateCheckResult.Error("GitHub server returned HTTP $code.")
+                if (code != 200) {
+                    return@withContext checkViaWebScraping()
                 }
 
                 val jsonStr = conn.inputStream.bufferedReader().readText()
@@ -3262,9 +3260,53 @@ object GitHubAutoUpdater {
                 } else {
                     return@withContext UpdateCheckResult.UpToDate(newestTagName, newestApkUrl)
                 }
-            } catch (e: Exception) {
-                return@withContext UpdateCheckResult.Error(e.localizedMessage ?: "Unknown error")
+            } catch (_: Exception) {
+                return@withContext checkViaWebScraping()
             }
+        }
+    }
+
+    private fun checkViaWebScraping(): UpdateCheckResult {
+        return try {
+            val redirectUrl = URL("https://github.com/korn9225-sketch/app-music-storage/releases/latest")
+            val conn = redirectUrl.openConnection() as HttpURLConnection
+            conn.instanceFollowRedirects = false
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+            conn.connectTimeout = 8000
+            conn.readTimeout = 8000
+
+            val location = conn.getHeaderField("Location")
+            val tagName = location?.substringAfterLast("/")?.ifBlank { null } ?: "v1.0"
+
+            val assetsUrl = URL("https://github.com/korn9225-sketch/app-music-storage/releases/expanded_assets/$tagName")
+            val assetsConn = assetsUrl.openConnection() as HttpURLConnection
+            assetsConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+            assetsConn.connectTimeout = 8000
+            assetsConn.readTimeout = 8000
+
+            var apkPath: String? = null
+            if (assetsConn.responseCode == 200) {
+                val html = assetsConn.inputStream.bufferedReader().readText()
+                val match = Regex("""href="([^"]+\.apk)"""", RegexOption.IGNORE_CASE).find(html)
+                if (match != null) {
+                    apkPath = match.groupValues[1]
+                }
+            }
+
+            if (apkPath != null) {
+                val fullApkUrl = if (apkPath.startsWith("http")) apkPath else "https://github.com$apkPath"
+                val isNewer = isNewerVersion(tagName, CURRENT_VERSION_TAG)
+                if (isNewer) {
+                    UpdateCheckResult.NewUpdateAvailable(tagName, fullApkUrl, "")
+                } else {
+                    UpdateCheckResult.UpToDate(tagName, fullApkUrl)
+                }
+            } else {
+                UpdateCheckResult.NoApkFound(tagName)
+            }
+        } catch (e: Exception) {
+            UpdateCheckResult.Error("Check failed: ${e.localizedMessage}")
         }
     }
 
