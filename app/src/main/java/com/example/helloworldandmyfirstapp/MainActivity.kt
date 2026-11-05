@@ -191,9 +191,9 @@ enum class MusicTab(val title: String) {
 }
 
 enum class MusicSubTab(val title: String) {
-    Songs("songs"),
     Artists("artists"),
-    Albums("albums")
+    Albums("albums"),
+    Songs("songs")
 }
 
 class MainActivity : ComponentActivity() {
@@ -490,7 +490,7 @@ class MainActivity : ComponentActivity() {
 
                 val canGoBack = selectedArtist != null ||
                         selectedAlbum != null ||
-                        selectedMusicSubTab != MusicSubTab.Songs ||
+                        selectedMusicSubTab != MusicSubTab.Artists ||
                         tabHistory.size > 1 ||
                         selectedTab != MusicTab.NowPlaying
 
@@ -498,7 +498,7 @@ class MainActivity : ComponentActivity() {
                     when {
                         selectedArtist != null -> selectedArtist = null
                         selectedAlbum != null -> selectedAlbum = null
-                        selectedMusicSubTab != MusicSubTab.Songs -> selectedMusicSubTab = MusicSubTab.Songs
+                        selectedMusicSubTab != MusicSubTab.Artists -> selectedMusicSubTab = MusicSubTab.Artists
                         tabHistory.size > 1 -> {
                             tabHistory.removeAt(tabHistory.lastIndex)
                             selectedTab = tabHistory.last()
@@ -2519,7 +2519,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         private set
 
     var selectedTab by mutableStateOf(MusicTab.NowPlaying)
-    var selectedMusicSubTab by mutableStateOf(MusicSubTab.Songs)
+    var selectedMusicSubTab by mutableStateOf(MusicSubTab.Artists)
     var selectedArtist by mutableStateOf<String?>(null)
     var selectedAlbum by mutableStateOf<String?>(null)
 
