@@ -22,6 +22,8 @@ import android.content.pm.PackageManager
 import androidx.compose.runtime.mutableStateListOf
 import androidx.activity.compose.rememberLauncherForActivityResult
 import android.provider.MediaStore
+import android.provider.OpenableColumns
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.content.Context
 import android.content.Intent
@@ -179,7 +181,7 @@ fun Song.getVerifiedArtworkUrl(): String {
         "blender" -> "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_small.jpg"
         "google" -> "https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg"
         "warner bros" -> "https://upload.wikimedia.org/wikipedia/en/2/2b/Constantine_poster.jpg"
-        else -> "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Folder.jpg"
+        else -> ""
     }
 }
 
@@ -417,6 +419,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(songs.size, viewModel.player) {
+                    if (viewModel.player != null) {
+                        viewModel.updateMediaItems(context, songs)
+                    }
+                }
+
                 LaunchedEffect(viewModel.player, viewModel.isPlaying) {
                     while (true) {
                         viewModel.updatePosition()
@@ -549,25 +557,14 @@ class MainActivity : ComponentActivity() {
                         }
 
                         val song = getSongFromUri(context, uri)
-                        songs.add(song)
-                        
-                        // Save to persistence
-                        val currentUris = sharedPrefs.getStringSet("local_media_uris", emptySet())?.toMutableSet() ?: mutableSetOf()
-                        currentUris.add(uri.toString())
-                        sharedPrefs.edit { putStringSet("local_media_uris", currentUris) }
-
-                        playerState?.addMediaItem(
-                            MediaItem.Builder()
-                                .setMediaId(song.url)
-                                .setUri(song.url.toUri())
-                                .setMediaMetadata(
-                                    MediaMetadata.Builder()
-                                        .setTitle(song.title)
-                                        .setArtist(song.artist)
-                                        .build()
-                                )
-                                .build()
-                        )
+                        if (songs.none { it.url == song.url }) {
+                            songs.add(song)
+                            
+                            // Save to persistence
+                            val currentUris = sharedPrefs.getStringSet("local_media_uris", emptySet())?.toMutableSet() ?: mutableSetOf()
+                            currentUris.add(uri.toString())
+                            sharedPrefs.edit { putStringSet("local_media_uris", currentUris) }
+                        }
                     }
                 }
 
@@ -727,6 +724,7 @@ class MainActivity : ComponentActivity() {
                                                 artist = selectedArtist!!,
                                                 songs = songs,
                                                 onBack = { selectedArtist = null },
+                                                onAlbumClick = { album -> selectedAlbum = album },
                                                 onSongClick = { song ->
                                                     val index = songs.indexOf(song)
                                                     if (index != -1) {
@@ -1299,9 +1297,10 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
         val imageMap = mutableMapOf<String, String>()
         var defaultIsolatedArtworkUrl: String? = null
 
-        fun processRawFile(fileName: String, downloadUrl: String) {
+        fun processRawFile(fileName: String, downloadUrl: String, fullPath: String = fileName) {
             if (fileName.isEmpty() || downloadUrl.isEmpty()) return
             val lowerName = fileName.lowercase()
+            val lowerPath = fullPath.lowercase()
             val baseName = fileName.substringBeforeLast(".").lowercase()
 
             if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png") || lowerName.endsWith(".webp")) {
@@ -1329,28 +1328,28 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                     .trim()
 
                 val parsedArtist = when {
-                    lowerName.contains("danny") -> "Danny Diablo"
-                    lowerName.contains("korn") -> "Korn"
-                    lowerName.contains("wallen") -> "Morgan Wallen"
-                    lowerName.contains("biohazard") -> "Biohazard"
-                    lowerName.contains("nofx") -> "NOFX"
-                    lowerName.contains("hatebreed") -> "Hatebreed"
-                    lowerName.contains("mudvayne") -> "Mudvayne"
-                    lowerName.contains("constantine") -> "Warner Bros"
+                    lowerPath.contains("danny") -> "Danny Diablo"
+                    lowerPath.contains("korn") -> "Korn"
+                    lowerPath.contains("wallen") -> "Morgan Wallen"
+                    lowerPath.contains("biohazard") -> "Biohazard"
+                    lowerPath.contains("nofx") -> "NOFX"
+                    lowerPath.contains("hatebreed") -> "Hatebreed"
+                    lowerPath.contains("mudvayne") -> "Mudvayne"
+                    lowerPath.contains("constantine") -> "Warner Bros"
                     else -> if (isVideo) "Video Storage" else "Featured Artist"
                 }
 
                 val parsedAlbum = when {
-                    lowerName.contains("danny") -> "Dollerz Make Sense"
-                    lowerName.contains("korn") -> "Follow the Leader"
-                    lowerName.contains("wallen") -> "One Thing At A Time"
-                    lowerName.contains("uncivilization") -> "Uncivilization"
-                    lowerName.contains("biohazard") || lowerName.contains("world.on.fire") || lowerName.contains("kill.or.be.killed") -> "Kill Or Be Killed"
-                    lowerName.contains("nofx") -> "The Decline"
-                    lowerName.contains("fatal") || lowerName.contains("paradox") -> "Fatal Paradox"
-                    lowerName.contains("hatebreed") -> if (isVideo) "Live Dominance" else "Fatal Paradox"
-                    lowerName.contains("mudvayne") -> "v2.0 Beta"
-                    lowerName.contains("constantine") -> "Movie"
+                    lowerPath.contains("danny") -> "Dollerz Make Sense"
+                    lowerPath.contains("korn") -> "Follow the Leader"
+                    lowerPath.contains("wallen") -> "One Thing At A Time"
+                    lowerPath.contains("uncivilization") -> "Uncivilization"
+                    lowerPath.contains("biohazard") || lowerPath.contains("world.on.fire") || lowerPath.contains("kill.or.be.killed") -> "Kill Or Be Killed"
+                    lowerPath.contains("nofx") -> "The Decline"
+                    lowerPath.contains("fatal") || lowerPath.contains("paradox") -> "Fatal Paradox"
+                    lowerPath.contains("hatebreed") -> if (isVideo) "Live Dominance" else "Fatal Paradox"
+                    lowerPath.contains("mudvayne") -> "v2.0 Beta"
+                    lowerPath.contains("constantine") -> "Movie"
                     else -> if (isVideo) "Video Single" else "Single"
                 }
 
@@ -1371,19 +1370,29 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
             }
         }
 
+        // Helper function to create HTTP connections with required GitHub API headers
+        fun openGitHubConnection(urlString: String): HttpURLConnection? {
+            return try {
+                val url = URL(urlString)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("User-Agent", "ZuneMusicPlayer/1.0")
+                if (PlaybackService.GITHUB_TOKEN.isNotBlank()) {
+                    conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+                }
+                conn.setRequestProperty("Accept", "application/vnd.github+json")
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn
+            } catch (_: Exception) {
+                null
+            }
+        }
+
         // 1. Fetch GitHub Releases Assets (v1.0, v2.0beta, and any future release tags)
         try {
-            val relUrl = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/releases")
-            val conn = relUrl.openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            if (PlaybackService.GITHUB_TOKEN.isNotBlank()) {
-                conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
-            }
-            conn.setRequestProperty("Accept", "application/vnd.github+json")
-            conn.connectTimeout = 8000
-            conn.readTimeout = 8000
-
-            if (conn.responseCode == 200) {
+            val conn = openGitHubConnection("https://api.github.com/repos/korn9225-sketch/app-music-storage/releases")
+            if (conn != null && conn.responseCode == 200) {
                 val jsonStr = conn.inputStream.bufferedReader().readText()
                 val releasesArray = JSONArray(jsonStr)
                 for (r in 0 until releasesArray.length()) {
@@ -1401,19 +1410,34 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
             e.printStackTrace()
         }
 
-        // 2. Fetch Repository Contents (Files/Folders)
-        try {
-            val contentsUrl = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/contents")
-            val conn = contentsUrl.openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            if (PlaybackService.GITHUB_TOKEN.isNotBlank()) {
-                conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+        // 2. Fetch Repository Tree Recursively (main & master branches)
+        for (branch in listOf("main", "master")) {
+            try {
+                val conn = openGitHubConnection("https://api.github.com/repos/korn9225-sketch/app-music-storage/git/trees/$branch?recursive=1")
+                if (conn != null && conn.responseCode == 200) {
+                    val jsonStr = conn.inputStream.bufferedReader().readText()
+                    val treeObj = org.json.JSONObject(jsonStr)
+                    val treeArray = treeObj.optJSONArray("tree") ?: continue
+                    for (i in 0 until treeArray.length()) {
+                        val item = treeArray.getJSONObject(i)
+                        val type = item.optString("type", "")
+                        if (type == "blob") {
+                            val path = item.optString("path", "")
+                            val rawUrl = "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/$branch/$path"
+                            val fileName = path.substringAfterLast("/")
+                            processRawFile(fileName, rawUrl, fullPath = path)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            conn.setRequestProperty("Accept", "application/vnd.github+json")
-            conn.connectTimeout = 8000
-            conn.readTimeout = 8000
+        }
 
-            if (conn.responseCode == 200) {
+        // 3. Fetch Root Repository Contents (Files/Folders)
+        try {
+            val conn = openGitHubConnection("https://api.github.com/repos/korn9225-sketch/app-music-storage/contents")
+            if (conn != null && conn.responseCode == 200) {
                 val jsonStr = conn.inputStream.bufferedReader().readText()
                 val jsonArray = JSONArray(jsonStr)
                 for (i in 0 until jsonArray.length()) {
@@ -2062,7 +2086,8 @@ fun VideoList(songs: List<Song>, onDownloadClick: (Song) -> Unit, onVideoClick: 
 
 @Composable
 fun ArtistList(songs: List<Song>, onArtistClick: (String) -> Unit) {
-    val artists = remember(songs) { songs.map { it.artist }.distinct().sorted() }
+    val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
+    val artists = remember(audioSongs) { audioSongs.map { it.artist }.distinct().sorted() }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 110.dp),
         modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -2070,7 +2095,7 @@ fun ArtistList(songs: List<Song>, onArtistClick: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         items(artists) { artist ->
-            val artistSongs = remember(artist, songs) { songs.filter { it.artist == artist } }
+            val artistSongs = remember(artist, audioSongs) { audioSongs.filter { it.artist == artist } }
             val firstSongArt = artistSongs.firstOrNull()?.getVerifiedArtworkUrl()
 
             Column(
@@ -2117,16 +2142,26 @@ fun ArtistList(songs: List<Song>, onArtistClick: (String) -> Unit) {
     }
 }
 
+private fun extractTrackNumber(title: String): Int {
+    val match = Regex("^(\\d+)").find(title.trim())
+    return match?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
+}
+
 @Composable
 fun ArtistDetailView(
     artist: String,
     songs: List<Song>,
     onBack: () -> Unit,
+    onAlbumClick: (String) -> Unit,
     onSongClick: (Song) -> Unit,
     onDownloadClick: (Song) -> Unit
 ) {
     val context = LocalContext.current
-    val artistSongs = remember(artist, songs) { songs.filter { it.artist == artist } }
+    val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
+    val artistSongs = remember(artist, audioSongs) {
+        audioSongs.filter { it.artist == artist }
+            .sortedWith(compareBy<Song> { extractTrackNumber(it.title) }.thenBy { it.title })
+    }
     val albums = remember(artistSongs) { artistSongs.map { it.album }.distinct() }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
@@ -2151,14 +2186,48 @@ fun ArtistDetailView(
                 Text("Albums", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White, modifier = Modifier.padding(vertical = 4.dp))
             }
             items(albums) { album ->
+                val albumSongs = remember(album, artistSongs) { artistSongs.filter { it.album == album } }
+                val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
+
                 Surface(
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)),
-                    color = Color(0xFF141418)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onAlbumClick(album) },
+                    color = Color(0xFF141418),
+                    tonalElevation = 2.dp
                 ) {
-                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Album, contentDescription = null, tint = Color(0xFFE5007D))
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = albumArt,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(album, style = MaterialTheme.typography.titleMedium, color = Color.White)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = album,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White
+                            )
+                            Text(
+                                text = "${albumSongs.size} tracks",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "View Album",
+                            tint = Color(0xFFE5007D),
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
@@ -2210,7 +2279,8 @@ fun ArtistDetailView(
 
 @Composable
 fun AlbumList(songs: List<Song>, onAlbumClick: (String) -> Unit) {
-    val albums = remember(songs) { songs.map { it.album }.distinct().sorted() }
+    val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
+    val albums = remember(audioSongs) { audioSongs.map { it.album }.distinct().sorted() }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 140.dp),
         modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -2218,7 +2288,7 @@ fun AlbumList(songs: List<Song>, onAlbumClick: (String) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         items(albums) { album ->
-            val albumSongs = remember(album, songs) { songs.filter { it.album == album } }
+            val albumSongs = remember(album, audioSongs) { audioSongs.filter { it.album == album } }
             val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
             val artistName = albumSongs.firstOrNull()?.artist ?: ""
 
@@ -2270,7 +2340,11 @@ fun AlbumDetailView(
     onDownloadClick: (Song) -> Unit
 ) {
     val context = LocalContext.current
-    val albumSongs = remember(album, songs) { songs.filter { it.album == album } }
+    val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
+    val albumSongs = remember(album, audioSongs) {
+        audioSongs.filter { it.album == album }
+            .sortedWith(compareBy<Song> { extractTrackNumber(it.title) }.thenBy { it.title })
+    }
     val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
@@ -2464,33 +2538,129 @@ fun GreetingPreview() {
     }
 }
 
+private fun getFileNameFromUri(context: Context, uri: Uri): String? {
+    if (uri.scheme == "content") {
+        try {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        return cursor.getString(nameIndex)
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+    return uri.lastPathSegment
+}
+
 private fun getSongFromUri(context: Context, uri: Uri): Song {
-    var title = "Unknown Title"
-    var artist = "Unknown Artist"
+    var title: String? = null
+    var artist: String? = null
+    var album: String? = null
     var isVideo = false
-    
+
     val mimeType = context.contentResolver.getType(uri)
     if (mimeType?.startsWith("video/") == true) {
         isVideo = true
     }
 
-    val projection = arrayOf(
-        MediaStore.MediaColumns.TITLE,
-        MediaStore.MediaColumns.ARTIST
-    )
+    // 1. Try MediaStore Query
     try {
+        val projection = arrayOf(
+            MediaStore.MediaColumns.TITLE,
+            MediaStore.MediaColumns.ARTIST,
+            MediaStore.MediaColumns.ALBUM
+        )
         context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val titleIndex = cursor.getColumnIndex(MediaStore.MediaColumns.TITLE)
                 val artistIndex = cursor.getColumnIndex(MediaStore.MediaColumns.ARTIST)
+                val albumIndex = cursor.getColumnIndex(MediaStore.MediaColumns.ALBUM)
                 if (titleIndex != -1) title = cursor.getString(titleIndex)
                 if (artistIndex != -1) artist = cursor.getString(artistIndex)
+                if (albumIndex != -1) album = cursor.getString(albumIndex)
             }
         }
-    } catch (e: Exception) {
-        title = uri.lastPathSegment ?: "Local Media"
+    } catch (_: Exception) {}
+
+    // Clean up typical MediaStore fallback strings like "<unknown>"
+    if (artist.equals("<unknown>", ignoreCase = true) || artist.isNullOrBlank()) artist = null
+    if (title.equals("<unknown>", ignoreCase = true) || title.isNullOrBlank()) title = null
+    if (album.equals("<unknown>", ignoreCase = true) || album.isNullOrBlank()) album = null
+
+    // 2. Try MediaMetadataRetriever for missing metadata & embedded album art
+    var embeddedArtworkUrl = ""
+    try {
+        val retriever = MediaMetadataRetriever()
+        retriever.setDataSource(context, uri)
+        if (title == null) {
+            title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+        }
+        if (artist == null) {
+            artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)
+        }
+        if (album == null) {
+            album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
+        }
+        val hasVideo = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO)
+        if (hasVideo == "yes") {
+            isVideo = true
+        }
+
+        val artBytes = retriever.embeddedPicture
+        if (artBytes != null) {
+            val cacheFile = File(context.cacheDir, "art_${uri.toString().hashCode()}.jpg")
+            if (!cacheFile.exists()) {
+                cacheFile.writeBytes(artBytes)
+            }
+            embeddedArtworkUrl = Uri.fromFile(cacheFile).toString()
+        }
+        retriever.release()
+    } catch (_: Exception) {}
+
+    // Clean up retrieved metadata
+    if (artist.equals("<unknown>", ignoreCase = true) || artist.isNullOrBlank()) artist = null
+    if (title.equals("<unknown>", ignoreCase = true) || title.isNullOrBlank()) title = null
+
+    // 3. Fallback to Display Name / Filename parsing
+    val displayName = getFileNameFromUri(context, uri) ?: uri.lastPathSegment ?: "Local Track"
+
+    if (title == null || artist == null) {
+        val cleanName = displayName.substringBeforeLast(".")
+            .replace("_", " ")
+            .replace(Regex("^\\d+[.\\s_-]*"), "")
+            .trim()
+
+        if (cleanName.contains(" - ")) {
+            val parts = cleanName.split(" - ", limit = 2)
+            if (artist == null && parts[0].isNotBlank()) {
+                artist = parts[0].trim()
+            }
+            if (title == null && parts[1].isNotBlank()) {
+                title = parts[1].trim()
+            }
+        } else {
+            if (title == null) {
+                title = cleanName
+            }
+        }
     }
-    return Song(title, artist, "Device", uri.toString(), "", isVideo = isVideo)
+
+    val finalTitle = title?.ifBlank { null } ?: displayName.substringBeforeLast(".")
+    val finalArtist = artist?.ifBlank { null } ?: "Local Artist"
+    val finalAlbum = album?.ifBlank { null } ?: "Device Storage"
+
+    return Song(
+        title = finalTitle,
+        artist = finalArtist,
+        album = finalAlbum,
+        url = uri.toString(),
+        artworkUrl = embeddedArtworkUrl,
+        isVideo = isVideo,
+        localUri = uri.toString()
+    )
 }
 
 private fun formatTime(ms: Long): String = if (ms < 0) {
@@ -2575,6 +2745,35 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 }
             })
         }, ContextCompat.getMainExecutor(context))
+    }
+
+    fun updateMediaItems(context: Context, songs: List<Song>) {
+        val controller = player ?: return
+        val currentCount = controller.mediaItemCount
+        if (songs.size > currentCount) {
+            val newItems = songs.subList(currentCount, songs.size).map { song ->
+                val finalUri = if (song.url.startsWith("content://") || song.url.startsWith("file://")) {
+                    song.url.toUri()
+                } else {
+                    val fileName = song.url.substringAfterLast("/")
+                    val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                    if (file.exists()) Uri.fromFile(file) else song.url.toUri()
+                }
+
+                MediaItem.Builder()
+                    .setMediaId(song.url)
+                    .setUri(finalUri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(song.title)
+                            .setArtist(song.artist)
+                            .setArtworkUri(song.getVerifiedArtworkUrl().toUri())
+                            .build()
+                    )
+                    .build()
+            }
+            controller.addMediaItems(newItems)
+        }
     }
 
     fun updatePosition() {

@@ -1,8 +1,12 @@
 {
-  "artists": [
+  "app": "Zune Music & Video Player",
+  "version": "1.0",
+  "repository": "korn9225-sketch/app-music-storage",
+  "catalog": [
     {
-      "name": "Danny Diablo",
+      "artist": "Danny Diablo",
       "album": "Dollerz Make Sense",
+      "genre": "Hardcore Hip-Hop",
       "tracks": [
         "Intro",
         "Ill Roc Soldiers ft. Stikman",
@@ -17,29 +21,151 @@
       ]
     },
     {
-      "name": "Korn",
+      "artist": "Korn",
       "album": "Follow the Leader",
-      "tracks_count": 14
+      "genre": "Nu Metal",
+      "tracks": [
+        "It's On",
+        "Freak On a Leash",
+        "Got the Life",
+        "Dead Bodies Everywhere",
+        "Children of the Korn",
+        "B.B.K.",
+        "Pretty",
+        "All In the Family",
+        "Reclaim My Place",
+        "Justin",
+        "Seed",
+        "Cameltosis",
+        "My Gift to You",
+        "Earache My Eye"
+      ]
     },
     {
-      "name": "Morgan Wallen",
+      "artist": "Morgan Wallen",
       "album": "One Thing At A Time",
-      "tracks_count": 36
+      "genre": "Country",
+      "tracks": [
+        "Born With A Beer In My Hand",
+        "Last Night",
+        "Everything I Love",
+        "Man Made A Bar",
+        "Devil Don't Know",
+        "One Thing At A Time",
+        "98 Braves",
+        "Ain't That Some",
+        "I Wrote The Book",
+        "Tennessee Numbers",
+        "Hope That's True",
+        "Whiskey Friends",
+        "Sunrise",
+        "Keith Whitley",
+        "In The Bible",
+        "You Proof",
+        "Thought You Should Know",
+        "F150-50",
+        "Neon Star",
+        "I Deserve A Drink",
+        "Wine Into Water",
+        "Me + All Your Reasons",
+        "Tennessee Fan",
+        "Money On Me",
+        "Thinkin' Bout Me",
+        "Single Than She Was",
+        "Days That End In Why",
+        "Last Drive Down Main",
+        "Me To Me",
+        "Don't Think Jesus",
+        "180 Lifestyle",
+        "Had It",
+        "Cowgirls",
+        "Good Girl Gone Missin'",
+        "Outlook",
+        "Dying Man"
+      ]
     },
     {
-      "name": "Biohazard",
-      "albums": ["Kill Or Be Killed", "Uncivilization"],
-      "tracks_count": 27
+      "artist": "Biohazard",
+      "albums": [
+        {
+          "name": "Kill Or Be Killed",
+          "tracks": [
+            "Intro",
+            "World On Fire",
+            "Never Forgive Never Forget",
+            "Kill Or Be Killed",
+            "Heads Kicked In",
+            "Beaten Senseless",
+            "Make My Stand",
+            "Open Your Eyes",
+            "Penalty",
+            "Dead To Me",
+            "Hallowed Ground"
+          ]
+        },
+        {
+          "name": "Uncivilization",
+          "tracks": [
+            "Sellout",
+            "Uncivilization",
+            "Wide Awake",
+            "Get Away",
+            "Unified",
+            "Gone",
+            "Letter Go",
+            "Last Man Standing",
+            "Hffk",
+            "Domination",
+            "Trap",
+            "Plastic",
+            "Cross The Line",
+            "A.T.F.",
+            "Life Of My Own",
+            "Sex And Violence"
+          ]
+        }
+      ]
     },
     {
-      "name": "NOFX",
+      "artist": "Hatebreed",
+      "albums": [
+        {
+          "name": "Fatal Paradox",
+          "tracks": [
+            "Poison Planet (COC cover)"
+          ]
+        },
+        {
+          "name": "Live Dominance",
+          "tracks": [
+            "Live Dominance Full Concert (Video)"
+          ]
+        }
+      ]
+    },
+    {
+      "artist": "NOFX",
       "album": "The Decline",
-      "tracks_count": 1
+      "genre": "Punk Rock",
+      "tracks": [
+        {
+          "title": "The Decline",
+          "duration": "18:19"
+        }
+      ]
     },
     {
-      "name": "Hatebreed",
-      "title": "Live Dominance Full Concert",
-      "type": "video"
+      "artist": "Video Collection",
+      "media_type": "Video",
+      "items": [
+        "Big Buck Bunny (Blender)",
+        "Elephants Dream (Blender)",
+        "For Bigger Blazes (Google)",
+        "Sintel (Blender)",
+        "Making Of Dig (Mudvayne)",
+        "Constantine (Warner Bros)",
+        "Live Dominance Full Concert (Hatebreed)"
+      ]
     }
   ]
 }

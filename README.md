@@ -4,6 +4,48 @@ Official media CDN, release asset storage, and workspace setup for the **Zune Mu
 
 ---
 
+## 📁 Recommended GitHub Repository Structure
+
+To keep your media storage repository clean, organized, and easily maintainable, organize files into the following directory tree:
+
+```
+app-music-storage/
+├── 📁 audio/                      # Audio Tracks organized by Artist
+│   ├── 📁 biohazard/
+│   │   ├── 📁 kill_or_be_killed/
+│   │   └── 📁 uncivilization/
+│   ├── 📁 danny_diablo/
+│   │   └── 📁 dollerz_make_sense/
+│   ├── 📁 hatebreed/
+│   │   └── 📁 fatal_paradox/
+│   ├── 📁 korn/
+│   │   └── 📁 follow_the_leader/
+│   ├── 📁 morgan_wallen/
+│   │   └── 📁 one_thing_at_a_time/
+│   └── 📁 nofx/
+│       └── 📁 the_decline/
+├── 📁 video/                      # Videos & Live Concerts
+│   ├── hatebreed_live_dominance.mp4
+│   ├── mudvayne_making_of_dig.webm
+│   ├── constantine_movie.mp4
+│   └── blender_samples/
+├── 📁 artwork/                    # High-Res Album Covers & Artwork
+│   ├── biohazard_uncivilization.jpg
+│   ├── danny_diablo.jpg
+│   ├── hatebreed_fatal_paradox.jpg
+│   ├── korn_follow_the_leader.jpg
+│   ├── morgan_wallen_cover.jpg
+│   └── nofx_the_decline.jpg
+├── 📄 tracks.json                 # Remote Catalog Index
+├── 📄 README.md                   # Repository Guide
+├── ⚙️ setup_workspace.bat         # Windows Auto-Setup
+└── ⚙️ setup_workspace.sh          # Linux/Mac Auto-Setup
+```
+
+> **Note:** The Zune Player app automatically scans subfolders recursively (`git/trees/main?recursive=1`), so any new MP3, M4A, or MP4 files added to subdirectories under `audio/` or `video/` will automatically appear in the app!
+
+---
+
 ## ⚡ Quick Workspace Auto-Setup (For On-The-Go Coding)
 
 Download and run one of these scripts on any fresh computer to automatically clone all your projects into your `AndroidStudioProjects` folder:
@@ -46,8 +88,13 @@ Download and run one of these scripts on any fresh computer to automatically clo
 
 ---
 
+### 👊 **Hatebreed** — *Fatal Paradox* & *Live Dominance*
+* **Tracks**: *"Poison Planet (COC cover)"*, *"Live Dominance Full Concert"* (MP4 Video)
+
+---
+
 ### 🎸 **NOFX** — *The Decline*
-* **Tracks**: *"The Decline"* (28-minute Epic Punk Track)
+* **Tracks**: *"The Decline"* (18-minute Epic Punk Track)
 
 ---
 
