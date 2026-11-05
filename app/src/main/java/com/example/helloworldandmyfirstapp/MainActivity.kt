@@ -136,6 +136,8 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
@@ -521,8 +523,8 @@ class MainActivity : ComponentActivity() {
 
                 val handleBackPress = {
                     when {
-                        selectedArtist != null -> selectedArtist = null
                         selectedAlbum != null -> selectedAlbum = null
+                        selectedArtist != null -> selectedArtist = null
                         selectedMusicSubTab != MusicSubTab.Artists -> selectedMusicSubTab = MusicSubTab.Artists
                         tabHistory.size > 1 -> {
                             tabHistory.removeAt(tabHistory.lastIndex)
@@ -717,11 +719,10 @@ class MainActivity : ComponentActivity() {
                                         }
 
                                         when {
-                                            selectedArtist != null -> ArtistDetailView(
-                                                artist = selectedArtist!!,
+                                            selectedAlbum != null -> AlbumDetailView(
+                                                album = selectedAlbum!!,
                                                 songs = songs,
-                                                onBack = { selectedArtist = null },
-                                                onAlbumClick = { album -> selectedAlbum = album },
+                                                onBack = { selectedAlbum = null },
                                                 onSongClick = { song ->
                                                     val index = songs.indexOf(song)
                                                     if (index != -1) {
@@ -732,10 +733,11 @@ class MainActivity : ComponentActivity() {
                                                 },
                                                 onDownloadClick = onDownloadClick
                                             )
-                                            selectedAlbum != null -> AlbumDetailView(
-                                                album = selectedAlbum!!,
+                                            selectedArtist != null -> ArtistDetailView(
+                                                artist = selectedArtist!!,
                                                 songs = songs,
-                                                onBack = { selectedAlbum = null },
+                                                onBack = { selectedArtist = null },
+                                                onAlbumClick = { album -> selectedAlbum = album },
                                                 onSongClick = { song ->
                                                     val index = songs.indexOf(song)
                                                     if (index != -1) {
@@ -2204,6 +2206,7 @@ fun ArtistDetailView(
             .sortedWith(compareBy<Song> { extractTrackNumber(it.title) }.thenBy { it.title })
     }
     val albums = remember(artistSongs) { artistSongs.map { it.album }.distinct() }
+    var expandedAlbums by remember { mutableStateOf(setOf<String>()) }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         Row(
@@ -2229,46 +2232,153 @@ fun ArtistDetailView(
             items(albums) { album ->
                 val albumSongs = remember(album, artistSongs) { artistSongs.filter { it.album == album } }
                 val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
+                val isExpanded = expandedAlbums.contains(album)
 
-                Surface(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .clickable { onAlbumClick(album) },
-                    color = Color(0xFF141418),
-                    tonalElevation = 2.dp
+                        .background(Color(0xFF141418))
                 ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                expandedAlbums = if (isExpanded) {
+                                    expandedAlbums - album
+                                } else {
+                                    expandedAlbums + album
+                                }
+                            },
+                        color = Color(0xFF141418),
+                        tonalElevation = 2.dp
                     ) {
-                        AsyncImage(
-                            model = albumArt,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = album,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = albumArt,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
                             )
-                            Text(
-                                text = "${albumSongs.size} tracks",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = album,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "${albumSongs.size} tracks",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    albumSongs.firstOrNull()?.let { onSongClick(it) }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Play Album",
+                                    tint = Color(0xFFE5007D),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    expandedAlbums = if (isExpanded) {
+                                        expandedAlbums - album
+                                    } else {
+                                        expandedAlbums + album
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isExpanded) "Collapse Album" else "Expand Album",
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { onAlbumClick(album) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "View Album Details",
+                                    tint = Color(0xFFE5007D),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
-                        Icon(
-                            imageVector = Icons.Default.SkipNext,
-                            contentDescription = "View Album",
-                            tint = Color(0xFFE5007D),
-                            modifier = Modifier.size(20.dp)
-                        )
+                    }
+
+                    if (isExpanded) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            albumSongs.forEachIndexed { index, song ->
+                                val fileName = song.url.substringAfterLast("/")
+                                val isDownloaded = remember(song.url) {
+                                    File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName).exists()
+                                }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onSongClick(song) },
+                                    color = Color(0xFF1E1E26)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${index + 1}",
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = Color(0xFFE5007D),
+                                            modifier = Modifier.width(24.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = song.title,
+                                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                                color = Color.White
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Play",
+                                            tint = Color.White.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        if (!song.url.startsWith("content://")) {
+                                            IconButton(
+                                                onClick = { onDownloadClick(song) },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
+                                                    contentDescription = "Download",
+                                                    tint = if (isDownloaded) Color(0xFFE5007D) else Color.White.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
                     }
                 }
             }
@@ -2395,7 +2505,7 @@ fun AlbumDetailView(
         ) {
             Icon(Icons.Default.SkipPrevious, contentDescription = "Back", tint = Color(0xFFE5007D))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Back to Albums", style = MaterialTheme.typography.titleMedium, color = Color(0xFFE5007D))
+            Text("Back", style = MaterialTheme.typography.titleMedium, color = Color(0xFFE5007D))
         }
 
         Row(modifier = Modifier.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
