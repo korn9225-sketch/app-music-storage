@@ -35,6 +35,7 @@ import java.io.File
 import java.net.URL
 import java.net.HttpURLConnection
 import org.json.JSONArray
+import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.filled.Download
@@ -1830,6 +1831,64 @@ fun SettingsView(
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // GitHub Auto-Updater Section
+        var isCheckingUpdate by remember { mutableStateOf(false) }
+        var updateStatusMessage by remember { mutableStateOf("") }
+        val coroutineScope = rememberCoroutineScope()
+        val context = LocalContext.current
+
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E26))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("GitHub App Auto-Updater", style = MaterialTheme.typography.titleMedium, color = Color(0xFFE5007D))
+                Text("Root-enabled silent APK updates from GitHub", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        if (isCheckingUpdate) return@Button
+                        isCheckingUpdate = true
+                        updateStatusMessage = "Checking GitHub for updates..."
+                        coroutineScope.launch {
+                            val update = GitHubAutoUpdater.checkForUpdates()
+                            if (update != null) {
+                                updateStatusMessage = "New update found: ${update.tagName}"
+                                GitHubAutoUpdater.downloadAndInstallUpdate(context, update.downloadUrl) { status ->
+                                    updateStatusMessage = status
+                                }
+                            } else {
+                                updateStatusMessage = "App is up to date (${GitHubAutoUpdater.CURRENT_VERSION_TAG})"
+                            }
+                            isCheckingUpdate = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5007D)),
+                    enabled = !isCheckingUpdate
+                ) {
+                    if (isCheckingUpdate) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("Check for GitHub App Updates", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+
+                if (updateStatusMessage.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = updateStatusMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
@@ -2841,5 +2900,132 @@ object FlashlightStrobeManager {
             val cameraId = cameraManager?.cameraIdList?.firstOrNull() ?: return
             cameraManager.setTorchMode(cameraId, false)
         } catch (_: Exception) {}
+    }
+}
+
+object GitHubAutoUpdater {
+    const val CURRENT_VERSION_TAG = "v1.1"
+
+    data class UpdateInfo(
+        val tagName: String,
+        val downloadUrl: String,
+        val body: String
+    )
+
+    suspend fun checkForUpdates(): UpdateInfo? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://api.github.com/repos/korn9225-sketch/app-music-storage/releases/latest")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("User-Agent", "ZuneMusicPlayer/1.0")
+                if (PlaybackService.GITHUB_TOKEN.isNotBlank()) {
+                    conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+                }
+                conn.setRequestProperty("Accept", "application/vnd.github+json")
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+
+                if (conn.responseCode == 200) {
+                    val jsonStr = conn.inputStream.bufferedReader().readText()
+                    val obj = JSONObject(jsonStr)
+                    val tagName = obj.optString("tag_name", "")
+                    val body = obj.optString("body", "")
+                    val assets = obj.optJSONArray("assets") ?: return@withContext null
+
+                    var apkUrl: String? = null
+                    for (i in 0 until assets.length()) {
+                        val asset = assets.getJSONObject(i)
+                        val name = asset.optString("name", "")
+                        if (name.endsWith(".apk", ignoreCase = true)) {
+                            apkUrl = asset.optString("browser_download_url", "")
+                            break
+                        }
+                    }
+
+                    if (!apkUrl.isNullOrBlank() && isNewerVersion(tagName, CURRENT_VERSION_TAG)) {
+                        return@withContext UpdateInfo(tagName, apkUrl, body)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            null
+        }
+    }
+
+    private fun isNewerVersion(remoteTag: String, currentTag: String): Boolean {
+        val remoteClean = remoteTag.removePrefix("v").removePrefix("V").trim()
+        val currentClean = currentTag.removePrefix("v").removePrefix("V").trim()
+        return remoteClean != currentClean && remoteClean.isNotBlank()
+    }
+
+    suspend fun downloadAndInstallUpdate(context: Context, downloadUrl: String, onProgress: (String) -> Unit): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                onProgress("Downloading update from GitHub...")
+                val apkFile = File(context.cacheDir, "update.apk")
+                if (apkFile.exists()) apkFile.delete()
+
+                val url = URL(downloadUrl)
+                val conn = url.openConnection() as HttpURLConnection
+                conn.setRequestProperty("User-Agent", "ZuneMusicPlayer/1.0")
+                conn.connectTimeout = 10000
+                conn.readTimeout = 15000
+
+                if (conn.responseCode == 200) {
+                    conn.inputStream.use { input ->
+                        apkFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                } else {
+                    onProgress("Download failed with HTTP ${conn.responseCode}")
+                    return@withContext false
+                }
+
+                onProgress("Installing update via Root...")
+                val installedViaRoot = installApkViaRoot(apkFile.absolutePath)
+                if (installedViaRoot) {
+                    onProgress("Silent update installed via Root!")
+                    return@withContext true
+                } else {
+                    onProgress("Opening system package installer...")
+                    installApkViaIntent(context, apkFile)
+                    return@withContext true
+                }
+            } catch (e: Exception) {
+                onProgress("Error during update: ${e.localizedMessage}")
+                return@withContext false
+            }
+        }
+    }
+
+    private fun installApkViaRoot(apkPath: String): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec("su")
+            val os = java.io.DataOutputStream(process.outputStream)
+            os.writeBytes("pm install -r \"$apkPath\"\n")
+            os.writeBytes("exit\n")
+            os.flush()
+            val exitCode = process.waitFor()
+            exitCode == 0
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun installApkViaIntent(context: Context, apkFile: File) {
+        try {
+            val authority = "${context.packageName}.fileprovider"
+            val apkUri = androidx.core.content.FileProvider.getUriForFile(context, authority, apkFile)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
