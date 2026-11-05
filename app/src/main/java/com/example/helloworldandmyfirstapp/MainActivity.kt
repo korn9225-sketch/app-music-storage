@@ -25,6 +25,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -398,7 +399,15 @@ class MainActivity : ComponentActivity() {
                         Song("Live Dominance Full Concert", "Hatebreed", "Live Dominance", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/Hatebreed.%40.Live.Dominance.Full.Concert.Xigg9UjWJNg.mp4", "https://img.youtube.com/vi/Xigg9UjWJNg/hqdefault.jpg", isVideo = true)
                     )
                     
-                    // Load saved local media
+                    // Automatically scan local device media (audio & video)
+                    val autoLocalSongs = scanLocalDeviceMedia(context)
+                    autoLocalSongs.forEach { localSong ->
+                        if (initialList.none { it.url == localSong.url }) {
+                            initialList.add(localSong)
+                        }
+                    }
+
+                    // Load saved local media URIs
                     val savedUris = sharedPrefs.getStringSet("local_media_uris", emptySet()) ?: emptySet()
                     savedUris.forEach { uriString ->
                         val uri = Uri.parse(uriString)
@@ -411,6 +420,13 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     viewModel.initController(context, songs)
+
+                    val autoLocalSongs = scanLocalDeviceMedia(context)
+                    autoLocalSongs.forEach { localSong ->
+                        if (songs.none { it.url == localSong.url }) {
+                            songs.add(localSong)
+                        }
+                    }
 
                     val (fetchedSongs, _) = fetchRepoSongsFromGitHub()
                     fetchedSongs.forEach { newSong ->
@@ -547,27 +563,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                val songPickerLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.OpenMultipleDocuments()
-                ) { uris ->
-                    uris.forEach { uri ->
-                        try {
-                            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        } catch (_: Exception) {
-                            // Some providers don't support persistable permissions
-                        }
 
-                        val song = getSongFromUri(context, uri)
-                        if (songs.none { it.url == song.url }) {
-                            songs.add(song)
-                            
-                            // Save to persistence
-                            val currentUris = sharedPrefs.getStringSet("local_media_uris", emptySet())?.toMutableSet() ?: mutableSetOf()
-                            currentUris.add(uri.toString())
-                            sharedPrefs.edit { putStringSet("local_media_uris", currentUris) }
-                        }
-                    }
-                }
 
                 val onDownloadClick = { song: Song ->
                     val fileName = song.url.substringAfterLast("/")
@@ -782,8 +778,7 @@ class MainActivity : ComponentActivity() {
                                     strobeSpeedMs = strobeSpeedMs,
                                     onStrobeSpeedChange = { strobeSpeedMs = it },
                                     isBeatSyncEnabled = isBeatSyncEnabled,
-                                    onBeatSyncToggle = { isBeatSyncEnabled = it },
-                                    onAddLocalMusic = { songPickerLauncher.launch(arrayOf("*/*")) }
+                                    onBeatSyncToggle = { isBeatSyncEnabled = it }
                                 )
                             }
                         }
@@ -1666,8 +1661,7 @@ fun SettingsView(
     strobeSpeedMs: Float,
     onStrobeSpeedChange: (Float) -> Unit,
     isBeatSyncEnabled: Boolean,
-    onBeatSyncToggle: (Boolean) -> Unit,
-    onAddLocalMusic: () -> Unit
+    onBeatSyncToggle: (Boolean) -> Unit
 ) {
     val scrollState = rememberScrollState()
 
@@ -1887,18 +1881,6 @@ fun SettingsView(
                     )
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = onAddLocalMusic,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500))
-        ) {
-            Icon(Icons.Default.VideoLibrary, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Add Local Media", color = Color.Black)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -2562,8 +2544,7 @@ fun AppPreview() {
             strobeSpeedMs = 100f,
             onStrobeSpeedChange = {},
             isBeatSyncEnabled = false,
-            onBeatSyncToggle = {},
-            onAddLocalMusic = {}
+            onBeatSyncToggle = {}
         )
     }
 }
@@ -2720,6 +2701,114 @@ private fun getSongFromUri(context: Context, uri: Uri): Song {
         isVideo = isVideo,
         localUri = uri.toString()
     )
+}
+
+private fun scanLocalDeviceMedia(context: Context): List<Song> {
+    val localSongs = mutableListOf<Song>()
+    val contentResolver = context.contentResolver
+
+    // 1. Scan Audio files from MediaStore
+    try {
+        val audioUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val audioProjection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.DATA
+        )
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+
+        contentResolver.query(audioUri, audioProjection, selection, null, "${MediaStore.Audio.Media.TITLE} ASC")?.use { cursor ->
+            val titleIdx = cursor.getColumnIndex(MediaStore.Audio.Media.TITLE)
+            val artistIdx = cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST)
+            val albumIdx = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM)
+            val dataIdx = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
+            val idIdx = cursor.getColumnIndex(MediaStore.Audio.Media._ID)
+
+            while (cursor.moveToNext()) {
+                val title = if (titleIdx != -1) cursor.getString(titleIdx) else null
+                val artist = if (artistIdx != -1) cursor.getString(artistIdx) else null
+                val album = if (albumIdx != -1) cursor.getString(albumIdx) else null
+                val filePath = if (dataIdx != -1) cursor.getString(dataIdx) else null
+                val id = if (idIdx != -1) cursor.getLong(idIdx) else 0L
+
+                val uri = if (filePath != null && File(filePath).exists()) {
+                    Uri.fromFile(File(filePath))
+                } else {
+                    ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+                }
+
+                val cleanArtist = if (artist.equals("<unknown>", ignoreCase = true) || artist.isNullOrBlank()) "Local Artist" else artist.trim()
+                val cleanTitle = if (title.equals("<unknown>", ignoreCase = true) || title.isNullOrBlank()) {
+                    filePath?.substringAfterLast("/")?.substringBeforeLast(".") ?: "Local Track"
+                } else title.trim()
+                val cleanAlbum = if (album.equals("<unknown>", ignoreCase = true) || album.isNullOrBlank()) "Device Storage" else album.trim()
+
+                localSongs.add(
+                    Song(
+                        title = cleanTitle,
+                        artist = cleanArtist,
+                        album = cleanAlbum,
+                        url = uri.toString(),
+                        artworkUrl = "",
+                        isVideo = false,
+                        localUri = uri.toString()
+                    )
+                )
+            }
+        }
+    } catch (_: Exception) {}
+
+    // 2. Scan Video files from MediaStore
+    try {
+        val videoUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        val videoProjection = arrayOf(
+            MediaStore.Video.Media._ID,
+            MediaStore.Video.Media.TITLE,
+            MediaStore.Video.Media.ARTIST,
+            MediaStore.Video.Media.DATA
+        )
+
+        contentResolver.query(videoUri, videoProjection, null, null, "${MediaStore.Video.Media.TITLE} ASC")?.use { cursor ->
+            val titleIdx = cursor.getColumnIndex(MediaStore.Video.Media.TITLE)
+            val artistIdx = cursor.getColumnIndex(MediaStore.Video.Media.ARTIST)
+            val dataIdx = cursor.getColumnIndex(MediaStore.Video.Media.DATA)
+            val idIdx = cursor.getColumnIndex(MediaStore.Video.Media._ID)
+
+            while (cursor.moveToNext()) {
+                val title = if (titleIdx != -1) cursor.getString(titleIdx) else null
+                val artist = if (artistIdx != -1) cursor.getString(artistIdx) else null
+                val filePath = if (dataIdx != -1) cursor.getString(dataIdx) else null
+                val id = if (idIdx != -1) cursor.getLong(idIdx) else 0L
+
+                val uri = if (filePath != null && File(filePath).exists()) {
+                    Uri.fromFile(File(filePath))
+                } else {
+                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id)
+                }
+
+                val cleanArtist = if (artist.equals("<unknown>", ignoreCase = true) || artist.isNullOrBlank()) "Video Storage" else artist.trim()
+                val cleanTitle = if (title.equals("<unknown>", ignoreCase = true) || title.isNullOrBlank()) {
+                    filePath?.substringAfterLast("/")?.substringBeforeLast(".") ?: "Local Video"
+                } else title.trim()
+
+                localSongs.add(
+                    Song(
+                        title = cleanTitle,
+                        artist = cleanArtist,
+                        album = "Device Videos",
+                        url = uri.toString(),
+                        artworkUrl = "",
+                        isVideo = true,
+                        localUri = uri.toString()
+                    )
+                )
+            }
+        }
+    } catch (_: Exception) {}
+
+    return localSongs
 }
 
 private fun formatTime(ms: Long): String = if (ms < 0) {
