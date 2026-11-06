@@ -35,6 +35,7 @@ import android.os.Environment
 import java.io.File
 import java.net.URL
 import java.net.HttpURLConnection
+import java.net.URLEncoder
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
@@ -211,7 +212,8 @@ enum class MusicTab(val title: String) {
 enum class MusicSubTab(val title: String) {
     Artists("artists"),
     Albums("albums"),
-    Songs("songs")
+    Songs("songs"),
+    YouTubeMusic("YouTube Music")
 }
 
 class MainActivity : ComponentActivity() {
@@ -775,6 +777,18 @@ class MainActivity : ComponentActivity() {
                                                     }, onDownloadClick = onDownloadClick)
                                                     MusicSubTab.Artists -> ArtistList(songs, onArtistClick = { selectedArtist = it })
                                                     MusicSubTab.Albums -> AlbumList(songs, onAlbumClick = { selectedAlbum = it })
+                                                    MusicSubTab.YouTubeMusic -> YouTubeMusicSearchTab(
+                                                        songs = songs,
+                                                        onSongClick = { song ->
+                                                            val index = songs.indexOf(song)
+                                                            if (index != -1) {
+                                                                playerState?.seekTo(index, 0L)
+                                                                playerState?.play()
+                                                                selectedTab = MusicTab.NowPlaying
+                                                            }
+                                                        },
+                                                        isDarkMode = viewModel.isDarkMode
+                                                    )
                                                 }
                                             }
                                         }
@@ -2790,6 +2804,210 @@ fun SongList(songs: List<Song>, onSongClick: (Int) -> Unit, onDownloadClick: (So
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+suspend fun searchYouTubeMusic(query: String): List<Song> {
+    return withContext(Dispatchers.IO) {
+        val results = mutableListOf<Song>()
+        try {
+            val encodedQuery = URLEncoder.encode("$query music audio", "UTF-8")
+            val url = URL("https://www.youtube.com/results?search_query=$encodedQuery")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+            conn.connectTimeout = 6000
+            conn.readTimeout = 6000
+
+            if (conn.responseCode == 200) {
+                val html = conn.inputStream.bufferedReader().readText()
+                val regex = Regex(""""videoRenderer":\{"videoId":"([^"]+)".*?"title":\{"runs":\[\{"text":"([^"]+)"\}.*?"ownerText":\{"runs":\[\{"text":"([^"]+)"\}""", RegexOption.DOT_MATCHES_ALL)
+                val matches = regex.findAll(html).take(12)
+
+                for (m in matches) {
+                    val videoId = m.groupValues[1]
+                    val title = m.groupValues[2]
+                    val artist = m.groupValues[3]
+                    val thumbUrl = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+                    val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+
+                    results.add(
+                        Song(
+                            title = title,
+                            artist = artist,
+                            album = "YouTube Music",
+                            url = streamUrl,
+                            artworkUrl = thumbUrl,
+                            isVideo = false
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        results
+    }
+}
+
+@Composable
+fun YouTubeMusicSearchTab(
+    songs: MutableList<Song>,
+    onSongClick: (Song) -> Unit,
+    isDarkMode: Boolean
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearching by remember { mutableStateOf(false) }
+    var searchResults by remember { mutableStateOf<List<Song>>(emptyList()) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val surfaceColor = if (isDarkMode) Color(0xFF141418) else Color.White
+    val textColor = if (isDarkMode) Color.White else Color(0xFF111115)
+    val subTextColor = if (isDarkMode) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f)
+    val accentColor = Color(0xFFE5007D)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text("Search YouTube Music...", color = subTextColor) },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = "Search", tint = accentColor)
+            },
+            trailingIcon = {
+                if (searchQuery.isNotBlank()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = textColor)
+                    }
+                }
+            },
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = accentColor,
+                unfocusedBorderColor = textColor.copy(alpha = 0.3f),
+                focusedTextColor = textColor,
+                unfocusedTextColor = textColor,
+                focusedContainerColor = surfaceColor,
+                unfocusedContainerColor = surfaceColor
+            ),
+            shape = RoundedCornerShape(14.dp)
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Button(
+            onClick = {
+                if (searchQuery.isBlank() || isSearching) return@Button
+                isSearching = true
+                coroutineScope.launch {
+                    val results = searchYouTubeMusic(searchQuery)
+                    searchResults = results
+                    isSearching = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+            enabled = !isSearching && searchQuery.isNotBlank(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            if (isSearching) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text("Search YouTube Music Catalog", fontWeight = FontWeight.Bold, color = Color.White)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (isSearching) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(200.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = accentColor)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Searching YouTube Music...", color = textColor)
+                }
+            }
+        } else if (searchResults.isNotEmpty()) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(searchResults) { song ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                if (songs.none { it.url == song.url }) {
+                                    songs.add(song)
+                                }
+                                onSongClick(song)
+                            },
+                        color = surfaceColor,
+                        tonalElevation = 2.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = song.getVerifiedArtworkUrl(),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = song.title,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = textColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "${song.artist} • YouTube Music",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = subTextColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            IconButton(onClick = {
+                                if (songs.none { it.url == song.url }) {
+                                    songs.add(song)
+                                }
+                                onSongClick(song)
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Play",
+                                    tint = accentColor,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(180.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Type a song or artist name above to search YouTube Music",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = subTextColor
+                )
             }
         }
     }
