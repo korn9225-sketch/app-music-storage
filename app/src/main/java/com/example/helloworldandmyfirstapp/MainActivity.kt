@@ -1181,6 +1181,68 @@ fun getLyricsForSong(song: Song?): List<String> {
     val artistLower = song.artist.lowercase()
 
     return when {
+        titleLower.contains("freak on a leash") -> listOf(
+            "Freak On a Leash - Korn",
+            "",
+            "[Verse 1]",
+            "Something takes a part of me",
+            "Something lost and never seen",
+            "Every time I start to believe",
+            "Something's raped and taken from me...",
+            "",
+            "[Chorus]",
+            "Feeling like a freak on a leash",
+            "Feeling like I have no release",
+            "How many times have I felt this way?",
+            "I'm falling away from me!",
+            "",
+            "[Bridge]",
+            "Boom-da-da-mda-mma-na-ma!",
+            "Boom-da-da-mda-mma-na-ma!",
+            "GO!",
+            "",
+            "[Outro]",
+            "You want it? Come get it!"
+        )
+        titleLower.contains("got the life") -> listOf(
+            "Got the Life - Korn",
+            "",
+            "[Verse 1]",
+            "Hate, something, sometime, someway",
+            "Something kick off the front door, listen close",
+            "What you say, what you say?",
+            "",
+            "[Chorus]",
+            "God pities, God pities all of us",
+            "God pities, God pities all of us",
+            "I've got the life!",
+            "",
+            "[Outro]",
+            "Got the life, got the life!"
+        )
+        titleLower.contains("it's on") || titleLower.contains("its on") -> listOf(
+            "It's On! - Korn",
+            "",
+            "[Verse 1]",
+            "Come on, it's on!",
+            "Take it all away, take it all away!",
+            "Breaking the silence inside of my mind",
+            "",
+            "[Chorus]",
+            "It's on! It's on! It's on!",
+            "Follow the leader, step into line!"
+        )
+        titleLower.contains("dead bodies everywhere") -> listOf(
+            "Dead Bodies Everywhere - Korn",
+            "",
+            "[Verse 1]",
+            "You want me to be what you want me to be",
+            "Never letting me be myself, set me free!",
+            "",
+            "[Chorus]",
+            "Dead bodies everywhere!",
+            "No one's listening, no one cares!"
+        )
         titleLower.contains("poison planet") -> listOf(
             "Poison Planet - Hatebreed",
             "",
@@ -1197,89 +1259,103 @@ fun getLyricsForSong(song: Song?): List<String> {
             "Destroy the corrupt and let truth show!",
             "",
             "[Outro]",
-            "Never submit! Never back down!",
-            "Reclaim our land, tear down their crown!"
+            "Never submit! Never back down!"
         )
-        artistLower.contains("korn") -> listOf(
-            "${song.title} - Korn",
-            "",
-            "[Intro]",
-            "Are you ready?!",
+        titleLower.contains("kill count increase") -> listOf(
+            "Kill Count Increase - Hatebreed",
             "",
             "[Verse 1]",
-            "Feeling like a freak on a leash",
-            "Feeling like I have no release",
-            "How many times have I felt this way?",
-            "Living every single day...",
+            "Rise above the chaos, conquer the fear",
+            "The battle line is drawn right here!",
             "",
             "[Chorus]",
-            "Boom-da-da-mda-mma-na-ma!",
-            "Boom-da-da-mda-mma-na-ma!",
-            "GO!",
-            "",
-            "[Outro]",
-            "You want it? Come get it!"
+            "Kill count increase!",
+            "No mercy, no peace!"
         )
-        artistLower.contains("biohazard") -> listOf(
-            "${song.title} - Biohazard",
-            "",
-            "[Intro]",
-            "Brooklyn hardcore! Uncivilization!",
+        titleLower.contains("kill or be killed") -> listOf(
+            "Kill Or Be Killed - Biohazard",
             "",
             "[Verse 1]",
-            "Living in the city streets, concrete jungle heat",
-            "Fighting for survival every day on our feet",
-            "Respect is earned, never given for free",
-            "Step up or get stepped on, that's reality!",
+            "Living on the edge, street life rule",
+            "Survive the pressure, don't be a fool!",
             "",
             "[Chorus]",
-            "Kill or be killed, no compromise!",
-            "Look into the fire in my eyes!",
-            "Stand strong, never fall!",
-            "One for unity, one for all!"
+            "Kill or be killed! No compromise!",
+            "Stand tall, look into my eyes!"
         )
-        artistLower.contains("danny diablo") -> listOf(
-            "${song.title} - Danny Diablo",
+        titleLower.contains("world on fire") -> listOf(
+            "World On Fire - Biohazard",
             "",
             "[Verse 1]",
-            "Dollerz make sense, Queens to Jersey connection",
-            "Hardcore rap representation",
-            "Heavy beats, street rhythm, underground legend",
-            "Representing the real ones 24/7!",
+            "The system is burning, the empire falls",
+            "Writing of destruction on the city walls!",
             "",
             "[Chorus]",
-            "Dollerz Make Sense!",
-            "Underground king, no defense!"
+            "World on fire! Flames rise high!",
+            "Rebuilding truth under the night sky!"
         )
-        artistLower.contains("morgan wallen") -> listOf(
-            "${song.title} - Morgan Wallen",
+        titleLower.contains("uncivilization") || titleLower.contains("sellout") -> listOf(
+            "Uncivilization - Biohazard",
+            "",
+            "[Verse 1]",
+            "Brooklyn heavy hitter, urban warfare",
+            "Respect and loyalty, truth in the air!",
+            "",
+            "[Chorus]",
+            "Uncivilization! Stand your ground!",
+            "Never sell out, represent our sound!"
+        )
+        titleLower.contains("last night") -> listOf(
+            "Last Night - Morgan Wallen",
             "",
             "[Verse 1]",
             "Last night we let the liquor talk",
             "I can't remember all the things we said",
-            "Small town sunset, acoustic guitar rhythm",
-            "Living one thing at a time...",
+            "But we said 'em anyway...",
             "",
             "[Chorus]",
-            "One thing at a time, country roads line",
-            "Cold beer on Friday night!",
-            "Living life right!"
+            "Last night we let the liquor talk",
+            "And I know that I said some things I didn't mean",
+            "No, last night wasn't the last night!"
+        )
+        titleLower.contains("born with a beer in my hand") -> listOf(
+            "Born With A Beer In My Hand - Morgan Wallen",
+            "",
+            "[Verse 1]",
+            "Mama tried her best to raise me right",
+            "Small town boy, Friday night light...",
+            "",
+            "[Chorus]",
+            "I was born with a beer in my hand",
+            "Just a good old country man!"
+        )
+        titleLower.contains("the decline") -> listOf(
+            "The Decline - NOFX",
+            "",
+            "[Verse 1]",
+            "Where are the passionate people?",
+            "Where is the acoustic sound?",
+            "Fellow citizens, pay attention please!",
+            "",
+            "[Chorus]",
+            "And so we call upon the author to explain...",
+            "The decline of our nation and mind!"
         )
         else -> listOf(
             "${song.title} - ${song.artist}",
             "Album: ${song.album}",
             "",
             "[Verse 1]",
-            "Music playing in the background",
-            "Feel the rhythm, feel the sound",
-            "Zune player beats spinning around",
+            "Listening to ${song.title} on Zune Player",
+            "Rhythm and bass pulsing through the speaker",
+            "Authentic track from ${song.album}",
             "",
             "[Chorus]",
-            "Turn up the volume, let the bass drop low",
-            "Stereo sound, let the music flow!",
+            "Turn up the volume, let the music play",
+            "Zune media player night and day!",
             "",
             "[Outro]",
-            "Playing on Zune Player..."
+            "Playing ${song.title} by ${song.artist}"
         )
     }
 }
@@ -2635,7 +2711,10 @@ fun ColorRow(selectedColor: Color, onColorSelect: (Color) -> Unit) {
 @Composable
 fun SongList(songs: List<Song>, onSongClick: (Int) -> Unit, onDownloadClick: (Song) -> Unit) {
     val context = LocalContext.current
-    val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
+    val audioSongs = remember(songs) {
+        songs.filter { !it.isVideo }
+            .sortedWith(compareBy<Song> { it.artist }.thenBy { it.album }.thenBy { extractTrackNumber(it.title) }.thenBy { it.title })
+    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 340.dp),
         modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 6.dp),
@@ -2857,8 +2936,13 @@ fun ArtistList(songs: List<Song>, onArtistClick: (String) -> Unit) {
 }
 
 private fun extractTrackNumber(title: String): Int {
-    val match = Regex("^(\\d+)").find(title.trim())
-    return match?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
+    val trimmed = title.trim()
+    val match = Regex("^(\\d+)").find(trimmed)
+    if (match != null) {
+        return match.groupValues[1].toIntOrNull() ?: Int.MAX_VALUE
+    }
+    val secondaryMatch = Regex("(\\d+)").find(trimmed)
+    return secondaryMatch?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
 }
 
 @Composable
