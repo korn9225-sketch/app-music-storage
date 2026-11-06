@@ -3034,7 +3034,21 @@ val officialTrackCatalog: Map<Pair<String, String>, Int> = mapOf(
     Pair("biohazard", "sex and violence") to 16,
 
     // NOFX
-    Pair("nofx", "the decline") to 1
+    Pair("nofx", "the decline") to 1,
+
+    // Hatebreed - Fatal Paradox
+    Pair("hatebreed", "kill count increase") to 1,
+    Pair("hatebreed", "the carrion choir") to 2,
+    Pair("hatebreed", "decisions become destinies") to 3,
+    Pair("hatebreed", "total invincible") to 4,
+    Pair("hatebreed", "fatal paradox") to 5,
+    Pair("hatebreed", "still a threat") to 6,
+    Pair("hatebreed", "sacrifice season") to 7,
+    Pair("hatebreed", "truth is a lion") to 8,
+    Pair("hatebreed", "make the demons obey") to 9,
+    Pair("hatebreed", "none left to save") to 10,
+    Pair("hatebreed", "poison planet") to 11,
+    Pair("hatebreed", "poison planet (coc cover)") to 11
 )
 
 private fun extractTrackNumber(song: Song): Int {
