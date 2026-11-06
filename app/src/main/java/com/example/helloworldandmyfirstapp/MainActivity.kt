@@ -3876,8 +3876,7 @@ object GitHubAutoUpdater {
                     UpdateCheckResult.UpToDate(tagName, fullApkUrl)
                 }
             } else {
-                val rawRepoApkUrl = "https://github.com/korn9225-sketch/Helloworldandmyfirstapp/raw/main/app-debug.apk"
-                UpdateCheckResult.NewUpdateAvailable("v1.2-LatestBuild", rawRepoApkUrl, "Direct GitHub repository APK build")
+                UpdateCheckResult.NoApkFound(tagName)
             }
         } catch (e: Exception) {
             UpdateCheckResult.Error("Check failed: ${e.localizedMessage}")
