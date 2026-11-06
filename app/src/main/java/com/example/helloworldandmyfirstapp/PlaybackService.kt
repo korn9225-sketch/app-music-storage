@@ -14,6 +14,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -32,15 +33,20 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
+        val defaultHeaders = mutableMapOf<String, String>()
+        if (GITHUB_TOKEN.isNotBlank()) {
+            defaultHeaders["Authorization"] = "Bearer $GITHUB_TOKEN"
+        }
+
         val httpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
             .setUserAgent("ZuneMusicPlayer/1.0")
-            .setDefaultRequestProperties(
-                mapOf("Authorization" to "Bearer $GITHUB_TOKEN")
-            )
+            .setDefaultRequestProperties(defaultHeaders)
+
+        val defaultDataSourceFactory = DefaultDataSource.Factory(this, httpDataSourceFactory)
 
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(httpDataSourceFactory)
+            .setDataSourceFactory(defaultDataSourceFactory)
 
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(mediaSourceFactory)

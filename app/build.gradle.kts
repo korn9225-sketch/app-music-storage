@@ -1,4 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 plugins {
     alias(libs.plugins.android.application)
@@ -54,6 +57,12 @@ abstract class CodeStatsTask : DefaultTask() {
                 }
         }
         val formattedCount = String.format("%,d", totalLines)
+        val dateStamp = SimpleDateFormat("MMddyyyy", Locale.US).format(Date())
+        val timeStamp = SimpleDateFormat("hh:mm a", Locale.US).format(Date())
+        val buildTime = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.US).format(Date())
+        val versionTag = "v2.0"
+        val fullVersionInfo = "$versionTag ZuneBeta$dateStamp $timeStamp"
+
         val outFile = outputFile.get().asFile
         outFile.parentFile.mkdirs()
         outFile.writeText("""
@@ -61,6 +70,9 @@ abstract class CodeStatsTask : DefaultTask() {
             
             object CodeStats {
                 const val LINE_COUNT = "${formattedCount} LINES OF CODE"
+                const val VERSION_NAME = "$versionTag"
+                const val BUILD_TIMESTAMP = "$buildTime"
+                const val FULL_VERSION_INFO = "$fullVersionInfo"
             }
         """.trimIndent())
     }
@@ -69,6 +81,10 @@ abstract class CodeStatsTask : DefaultTask() {
 val generateCodeStats = tasks.register<CodeStatsTask>("generateCodeStats") {
     sourceDir.set(layout.projectDirectory.dir("src/main/java"))
     outputFile.set(layout.projectDirectory.file("src/main/java/com/example/helloworldandmyfirstapp/CodeStats.kt"))
+}
+
+tasks.named("preBuild") {
+    dependsOn(generateCodeStats)
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -91,6 +107,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.playServicesWearable)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

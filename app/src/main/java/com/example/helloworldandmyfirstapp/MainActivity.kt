@@ -42,6 +42,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.filled.Download
 import android.app.Application
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.CookieManager
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material.icons.filled.DownloadDone
@@ -193,7 +199,13 @@ fun Song.getVerifiedArtworkUrl(): String {
             }
         }
         "nofx" -> "https://coverartarchive.org/release-group/826859eb-1608-3ef4-ac4d-86c57f50c493/front"
-        "hatebreed" -> "https://img.youtube.com/vi/Xigg9UjWJNg/hqdefault.jpg"
+        "hatebreed" -> {
+            if (album.equals("Live Dominance", ignoreCase = true)) {
+                "https://img.youtube.com/vi/Xigg9UjWJNg/hqdefault.jpg"
+            } else {
+                "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"
+            }
+        }
         "mudvayne" -> "https://i.ytimg.com/vi/s0M3_o4P2uY/hqdefault.jpg"
         "blender" -> "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_small.jpg"
         "google" -> "https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg"
@@ -402,6 +414,19 @@ class MainActivity : ComponentActivity() {
                         Song("Life Of My Own", "Biohazard", "Uncivilization", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/15.life.of.my.own.mp3", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/biohazarduncivilization2001.jpg"),
                         Song("Sex And Violence", "Biohazard", "Uncivilization", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/16.sex.and.violence.mp3", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/biohazarduncivilization2001.jpg"),
 
+                        // Hatebreed - Fatal Paradox Tracks (Local High-Quality MP3s in Track Order 01-11)
+                        Song("Kill Count Increase", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_01_kill_count_increase}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("The Carrion Choir", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_02_the_carrion_choir}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Decisions Become Destinies", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_03_decisions_become_destinies}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Total Invincible", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_04_total_invincible}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Fatal Paradox", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_05_fatal_paradox}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Still A Threat", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_06_still_a_threat}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Sacrifice Season (feat. John Tardy)", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_07_sacrifice_season}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Truth Is A Lion", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_08_truth_is_a_lion}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Make The Demons Obey", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_09_make_the_demons_obey}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("None Left To Save", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_10_none_left_to_save}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+                        Song("Poison Planet (COC cover)", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_11_poison_planet}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
+
                         // NOFX Tracks
                         Song("The Decline", "NOFX", "The Decline", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/NOFX.-.The.Decline.mp3", "https://coverartarchive.org/release-group/826859eb-1608-3ef4-ac4d-86c57f50c493/front"),
 
@@ -429,7 +454,12 @@ class MainActivity : ComponentActivity() {
                         val uri = Uri.parse(uriString)
                         initialList.add(getSongFromUri(context, uri))
                     }
-                    initialList
+                    val uniqueList = initialList.distinctBy { song ->
+                        val cleanTitle = song.title.lowercase().replace("feat", "").replace("ft", "").replace(Regex("[^a-z0-9]"), "")
+                        val cleanArtist = song.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
+                        if (cleanArtist.isNotBlank() && cleanTitle.isNotBlank()) "${cleanArtist}_${cleanTitle}" else song.url
+                    }
+                    mutableStateListOf<Song>().apply { addAll(uniqueList) }
                 }
 
                 val viewModel: MusicViewModel = viewModel()
@@ -447,10 +477,12 @@ class MainActivity : ComponentActivity() {
 
                     val (fetchedSongs, _) = fetchRepoSongsFromGitHub()
                     fetchedSongs.forEach { newSong ->
-                        val newKey = "${newSong.artist.lowercase()}_${newSong.title.lowercase().replace(Regex("[^a-z0-9]"), "")}"
+                        val cleanNewTitle = newSong.title.lowercase().replace("feat", "").replace("ft", "").replace(Regex("[^a-z0-9]"), "")
+                        val cleanNewArtist = newSong.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
                         val exists = songs.any { song ->
-                            val existingKey = "${song.artist.lowercase()}_${song.title.lowercase().replace(Regex("[^a-z0-9]"), "")}"
-                            song.url == newSong.url || existingKey == newKey
+                            val cleanSongTitle = song.title.lowercase().replace("feat", "").replace("ft", "").replace(Regex("[^a-z0-9]"), "")
+                            val cleanSongArtist = song.artist.lowercase().replace(Regex("[^a-z0-9]"), "")
+                            song.url == newSong.url || (cleanSongArtist == cleanNewArtist && (cleanSongTitle == cleanNewTitle || cleanSongTitle.contains(cleanNewTitle) || cleanNewTitle.contains(cleanSongTitle)))
                         }
                         if (!exists) {
                             songs.add(newSong)
@@ -485,6 +517,15 @@ class MainActivity : ComponentActivity() {
                             currentSong.title,
                             currentSong.artist,
                             isPlaying
+                        )
+                        PhoneWearSyncManager.updateNowPlaying(
+                            context = context,
+                            title = currentSong.title,
+                            artist = currentSong.artist,
+                            artworkUrl = currentSong.getVerifiedArtworkUrl(),
+                            isPlaying = isPlaying,
+                            currentPosition = currentPosition,
+                            totalDuration = totalDuration
                         )
                     }
                 }
@@ -609,7 +650,21 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Scaffold(
+                val isWearOS = remember {
+                    context.packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
+                }
+
+                if (isWearOS) {
+                    WearOSRemoteControlScreen(
+                        songs = songs,
+                        currentSongIndex = currentSongIndex,
+                        isPlaying = isPlaying,
+                        currentPosition = currentPosition,
+                        totalDuration = totalDuration,
+                        playerState = playerState
+                    )
+                } else {
+                    Scaffold(
                     modifier = Modifier
                         .fillMaxSize()
                         .onKeyEvent { event ->
@@ -746,6 +801,7 @@ class MainActivity : ComponentActivity() {
                                                 onSongClick = { song ->
                                                     val index = songs.indexOf(song)
                                                     if (index != -1) {
+                                                        viewModel.updateMediaItems(context, songs)
                                                         playerState?.seekTo(index, 0L)
                                                         playerState?.play()
                                                         selectedTab = MusicTab.NowPlaying
@@ -761,6 +817,7 @@ class MainActivity : ComponentActivity() {
                                                 onSongClick = { song ->
                                                     val index = songs.indexOf(song)
                                                     if (index != -1) {
+                                                        viewModel.updateMediaItems(context, songs)
                                                         playerState?.seekTo(index, 0L)
                                                         playerState?.play()
                                                         selectedTab = MusicTab.NowPlaying
@@ -771,17 +828,19 @@ class MainActivity : ComponentActivity() {
                                             else -> {
                                                 when (selectedMusicSubTab) {
                                                     MusicSubTab.Songs -> SongList(songs, onSongClick = { index ->
+                                                        viewModel.updateMediaItems(context, songs)
                                                         playerState?.seekTo(index, 0L)
                                                         playerState?.play()
                                                         selectedTab = MusicTab.NowPlaying
                                                     }, onDownloadClick = onDownloadClick)
                                                     MusicSubTab.Artists -> ArtistList(songs, onArtistClick = { selectedArtist = it })
                                                     MusicSubTab.Albums -> AlbumList(songs, onAlbumClick = { selectedAlbum = it })
-                                                    MusicSubTab.YouTubeMusic -> YouTubeMusicSearchTab(
+                                                    MusicSubTab.YouTubeMusic -> YouTubeMusicTabScreen(
                                                         songs = songs,
                                                         onSongClick = { song ->
                                                             val index = songs.indexOf(song)
                                                             if (index != -1) {
+                                                                viewModel.updateMediaItems(context, songs)
                                                                 playerState?.seekTo(index, 0L)
                                                                 playerState?.play()
                                                                 selectedTab = MusicTab.NowPlaying
@@ -797,6 +856,7 @@ class MainActivity : ComponentActivity() {
                                 MusicTab.Video -> VideoList(songs, onDownloadClick = onDownloadClick) { song ->
                                     val index = songs.indexOf(song)
                                     if (index != -1) {
+                                        viewModel.updateMediaItems(context, songs)
                                         playerState?.seekTo(index, 0L)
                                         playerState?.play()
                                         selectedTab = MusicTab.NowPlaying
@@ -820,8 +880,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                
-                    }
+            }
+        }
 
                 // CRT Scanlines Overlay
                 androidx.compose.foundation.Canvas(
@@ -1741,7 +1801,7 @@ fun PlayerView(
                         )
                     }
 
-                    if (currentSong != null && !currentSong.url.startsWith("content://")) {
+                    if (currentSong != null && (currentSong.url.startsWith("http://") || currentSong.url.startsWith("https://"))) {
                         val fileName = currentSong.url.substringAfterLast("/")
                         val isDownloaded = remember(currentSong.url) { 
                             File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName).exists() 
@@ -2686,7 +2746,7 @@ fun SettingsView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "v1.3 ZuneBeta11052026 09:53 PM",
+                text = CodeStats.FULL_VERSION_INFO,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
@@ -2794,7 +2854,7 @@ fun SongList(songs: List<Song>, onSongClick: (Int) -> Unit, onDownloadClick: (So
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    if (!song.url.startsWith("content://")) {
+                    if (song.url.startsWith("http://") || song.url.startsWith("https://")) {
                         IconButton(onClick = { onDownloadClick(song) }) {
                             Icon(
                                 imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
@@ -2809,57 +2869,86 @@ fun SongList(songs: List<Song>, onSongClick: (Int) -> Unit, onDownloadClick: (So
     }
 }
 
-suspend fun searchYouTubeMusic(query: String): List<Song> {
-    return withContext(Dispatchers.IO) {
-        val results = mutableListOf<Song>()
-        try {
-            val encodedQuery = URLEncoder.encode("$query music audio", "UTF-8")
-            val url = URL("https://www.youtube.com/results?search_query=$encodedQuery")
-            val conn = url.openConnection() as HttpURLConnection
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            conn.connectTimeout = 6000
-            conn.readTimeout = 6000
+@Composable
+fun YouTubeLoginDialog(
+    onDismiss: () -> Unit,
+    onLoginSuccess: (cookies: String) -> Unit
+) {
+    var isCapturing by remember { mutableStateOf(false) }
 
-            if (conn.responseCode == 200) {
-                val html = conn.inputStream.bufferedReader().readText()
-                val regex = Regex(""""videoRenderer":\{"videoId":"([^"]+)".*?"title":\{"runs":\[\{"text":"([^"]+)"\}.*?"ownerText":\{"runs":\[\{"text":"([^"]+)"\}""", RegexOption.DOT_MATCHES_ALL)
-                val matches = regex.findAll(html).take(12)
-
-                for (m in matches) {
-                    val videoId = m.groupValues[1]
-                    val title = m.groupValues[2]
-                    val artist = m.groupValues[3]
-                    val thumbUrl = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
-                    val streamUrl = "https://www.youtube.com/watch?v=$videoId"
-
-                    results.add(
-                        Song(
-                            title = title,
-                            artist = artist,
-                            album = "YouTube Music",
-                            url = streamUrl,
-                            artworkUrl = thumbUrl,
-                            isVideo = false
-                        )
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(550.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF181820)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Log In to YouTube Music",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
                     )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                    }
                 }
+
+                AndroidView(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    factory = { ctx ->
+                        WebView(ctx).apply {
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
+
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    val cookies = CookieManager.getInstance().getCookie(url) ?: ""
+                                    if (cookies.contains("SAPISID") || cookies.contains("HSID") || cookies.contains("SSID")) {
+                                        if (!isCapturing) {
+                                            isCapturing = true
+                                            onLoginSuccess(cookies)
+                                        }
+                                    }
+                                }
+                            }
+                            loadUrl("https://accounts.google.com/ServiceLogin?service=youtube&continue=https://music.youtube.com")
+                        }
+                    }
+                )
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
-        results
     }
 }
 
 @Composable
-fun YouTubeMusicSearchTab(
+fun YouTubeMusicTabScreen(
     songs: MutableList<Song>,
     onSongClick: (Song) -> Unit,
     isDarkMode: Boolean
 ) {
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
     var searchResults by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var userPlaylists by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var isLoadingUserPlaylists by remember { mutableStateOf(false) }
+    var isLoggedIn by remember { mutableStateOf(YouTubeMusicAuthManager.isLoggedIn(context)) }
+    var showLoginDialog by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
 
     val surfaceColor = if (isDarkMode) Color(0xFF141418) else Color.White
@@ -2867,11 +2956,92 @@ fun YouTubeMusicSearchTab(
     val subTextColor = if (isDarkMode) Color.White.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.6f)
     val accentColor = Color(0xFFE5007D)
 
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            isLoadingUserPlaylists = true
+            userPlaylists = YouTubeMusicEngine.fetchUserPlaylists(context)
+            isLoadingUserPlaylists = false
+        }
+    }
+
+    if (showLoginDialog) {
+        YouTubeLoginDialog(
+            onDismiss = { showLoginDialog = false },
+            onLoginSuccess = { cookies ->
+                YouTubeMusicAuthManager.saveCookies(context, cookies)
+                isLoggedIn = true
+                showLoginDialog = false
+                android.widget.Toast.makeText(context, "Logged into YouTube Music successfully!", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
+        // Account Status Bar
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = surfaceColor,
+            tonalElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        tint = if (isLoggedIn) Color(0xFF4CAF50) else subTextColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = if (isLoggedIn) "YouTube Music Account" else "Guest Mode",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = textColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isLoggedIn) "Connected & Syncing Playlists" else "Sign in to access your library",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = subTextColor
+                        )
+                    }
+                }
+
+                if (isLoggedIn) {
+                    OutlinedButton(
+                        onClick = {
+                            YouTubeMusicAuthManager.logout(context)
+                            isLoggedIn = false
+                            userPlaylists = emptyList()
+                            android.widget.Toast.makeText(context, "Logged out of YouTube Music", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+                    ) {
+                        Text("Log Out", fontSize = 11.sp)
+                    }
+                } else {
+                    Button(
+                        onClick = { showLoginDialog = true },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                    ) {
+                        Text("Sign In", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -2899,14 +3069,14 @@ fun YouTubeMusicSearchTab(
             shape = RoundedCornerShape(14.dp)
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Button(
             onClick = {
                 if (searchQuery.isBlank() || isSearching) return@Button
                 isSearching = true
                 coroutineScope.launch {
-                    val results = searchYouTubeMusic(searchQuery)
+                    val results = YouTubeMusicEngine.searchMusic(context, searchQuery)
                     searchResults = results
                     isSearching = false
                 }
@@ -2920,14 +3090,14 @@ fun YouTubeMusicSearchTab(
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Text("Search YouTube Music Catalog", fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Search Catalog", fontWeight = FontWeight.Bold, color = Color.White)
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         if (isSearching) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
+                modifier = Modifier.fillMaxWidth().height(180.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -2938,64 +3108,31 @@ fun YouTubeMusicSearchTab(
             }
         } else if (searchResults.isNotEmpty()) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    Text("Search Results", style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.Bold)
+                }
                 items(searchResults) { song ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                if (songs.none { it.url == song.url }) {
-                                    songs.add(song)
-                                }
-                                onSongClick(song)
-                            },
-                        color = surfaceColor,
-                        tonalElevation = 2.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(
-                                model = song.getVerifiedArtworkUrl(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = song.title,
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = textColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = "${song.artist} • YouTube Music",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = subTextColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            IconButton(onClick = {
-                                if (songs.none { it.url == song.url }) {
-                                    songs.add(song)
-                                }
-                                onSongClick(song)
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Play",
-                                    tint = accentColor,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    }
+                    YouTubeSongItemRow(song, songs, surfaceColor, textColor, subTextColor, accentColor, onSongClick)
+                }
+            }
+        } else if (userPlaylists.isNotEmpty()) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    Text("My Liked Music & Saved Tracks", style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.Bold)
+                }
+                items(userPlaylists) { song ->
+                    YouTubeSongItemRow(song, songs, surfaceColor, textColor, subTextColor, accentColor, onSongClick)
+                }
+            }
+        } else if (isLoadingUserPlaylists) {
+            Box(
+                modifier = Modifier.fillMaxWidth().height(180.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = accentColor)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Syncing your YouTube Music library...", color = textColor)
                 }
             }
         } else {
@@ -3004,10 +3141,95 @@ fun YouTubeMusicSearchTab(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Type a song or artist name above to search YouTube Music",
+                    text = if (isLoggedIn) "Type a song or artist name to search" else "Sign in above to load your saved music, or search any song",
                     style = MaterialTheme.typography.bodyMedium,
                     color = subTextColor
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun YouTubeSongItemRow(
+    song: Song,
+    songs: MutableList<Song>,
+    surfaceColor: Color,
+    textColor: Color,
+    subTextColor: Color,
+    accentColor: Color,
+    onSongClick: (Song) -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var isExtracting by remember { mutableStateOf(false) }
+
+    val handlePlay = {
+        if (!isExtracting) {
+            isExtracting = true
+            coroutineScope.launch {
+                val playableUrl = YouTubeMusicEngine.resolvePlayableAudioUrl(song.url)
+                val playableSong = song.copy(url = playableUrl)
+                if (songs.none { it.url == playableSong.url }) {
+                    songs.add(playableSong)
+                }
+                onSongClick(playableSong)
+                isExtracting = false
+            }
+        }
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { handlePlay() },
+        color = surfaceColor,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = song.getVerifiedArtworkUrl(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${song.artist} • ${song.album}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = subTextColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (isExtracting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp).padding(4.dp),
+                    color = accentColor,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                IconButton(onClick = { handlePlay() }) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }
@@ -3272,6 +3494,7 @@ val officialTrackCatalog: Map<Pair<String, String>, Int> = mapOf(
     Pair("hatebreed", "fatal paradox") to 5,
     Pair("hatebreed", "still a threat") to 6,
     Pair("hatebreed", "sacrifice season") to 7,
+    Pair("hatebreed", "sacrifice season (feat. john tardy)") to 7,
     Pair("hatebreed", "truth is a lion") to 8,
     Pair("hatebreed", "make the demons obey") to 9,
     Pair("hatebreed", "none left to save") to 10,
@@ -3480,7 +3703,7 @@ fun ArtistDetailView(
                                             tint = Color.White.copy(alpha = 0.5f),
                                             modifier = Modifier.size(18.dp)
                                         )
-                                        if (!song.url.startsWith("content://")) {
+                                        if (song.url.startsWith("http://") || song.url.startsWith("https://")) {
                                             IconButton(
                                                 onClick = { onDownloadClick(song) },
                                                 modifier = Modifier.size(32.dp)
@@ -3531,7 +3754,7 @@ fun ArtistDetailView(
                             Text(song.title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = Color.White)
                             Text(song.album, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
                         }
-                        if (!song.url.startsWith("content://")) {
+                        if (song.url.startsWith("http://") || song.url.startsWith("https://")) {
                             IconButton(onClick = { onDownloadClick(song) }) {
                                 Icon(
                                     imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
@@ -3664,7 +3887,7 @@ fun AlbumDetailView(
                         Icon(Icons.Default.Audiotrack, contentDescription = null, tint = Color(0xFFE5007D), modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(song.title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = Color.White, modifier = Modifier.weight(1f))
-                        if (!song.url.startsWith("content://")) {
+                        if (song.url.startsWith("http://") || song.url.startsWith("https://")) {
                             IconButton(onClick = { onDownloadClick(song) }) {
                                 Icon(
                                     imageVector = if (isDownloaded) Icons.Default.DownloadDone else Icons.Default.Download,
@@ -4094,9 +4317,13 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
             if (controller.mediaItemCount == 0) {
                 val mediaItems = songs.map { song ->
-                    val fileName = song.url.substringAfterLast("/")
-                    val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-                    val finalUri = if (file.exists()) Uri.fromFile(file) else song.url.toUri()
+                    val finalUri = if (song.url.startsWith("content://") || song.url.startsWith("file://") || song.url.startsWith("android.resource://")) {
+                        song.url.toUri()
+                    } else {
+                        val fileName = song.url.substringAfterLast("/")
+                        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
+                        if (file.exists()) Uri.fromFile(file) else song.url.toUri()
+                    }
                     
                     MediaItem.Builder()
                         .setMediaId(song.url)
@@ -4305,7 +4532,7 @@ sealed class UpdateCheckResult {
 }
 
 object GitHubAutoUpdater {
-    const val CURRENT_VERSION_TAG = "v1.2"
+    const val CURRENT_VERSION_TAG = "v2.0"
 
     suspend fun checkForUpdatesResult(): UpdateCheckResult {
         return withContext(Dispatchers.IO) {
@@ -4379,26 +4606,47 @@ object GitHubAutoUpdater {
             val conn = redirectUrl.openConnection() as HttpURLConnection
             conn.instanceFollowRedirects = false
             conn.requestMethod = "GET"
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
             conn.connectTimeout = 8000
             conn.readTimeout = 8000
 
             val location = conn.getHeaderField("Location")
             val tagName = location?.substringAfterLast("/")?.ifBlank { null } ?: "v1.0"
 
-            val assetsUrl = URL("https://github.com/korn9225-sketch/app-music-storage/releases/expanded_assets/$tagName")
-            val assetsConn = assetsUrl.openConnection() as HttpURLConnection
-            assetsConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)")
-            assetsConn.connectTimeout = 8000
-            assetsConn.readTimeout = 8000
-
             var apkPath: String? = null
-            if (assetsConn.responseCode == 200) {
-                val html = assetsConn.inputStream.bufferedReader().readText()
-                val match = Regex("""href="([^"]+\.apk)"""", RegexOption.IGNORE_CASE).find(html)
-                if (match != null) {
-                    apkPath = match.groupValues[1]
+
+            // Try expanded_assets
+            try {
+                val assetsUrl = URL("https://github.com/korn9225-sketch/app-music-storage/releases/expanded_assets/$tagName")
+                val assetsConn = assetsUrl.openConnection() as HttpURLConnection
+                assetsConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                assetsConn.connectTimeout = 8000
+                assetsConn.readTimeout = 8000
+                if (assetsConn.responseCode == 200) {
+                    val html = assetsConn.inputStream.bufferedReader().readText()
+                    val match = Regex("""href="([^"]+\.apk[^"]*)"""", RegexOption.IGNORE_CASE).find(html)
+                    if (match != null) {
+                        apkPath = match.groupValues[1]
+                    }
                 }
+            } catch (_: Exception) {}
+
+            // Fallback: Scrape main releases page
+            if (apkPath == null) {
+                try {
+                    val pageUrl = URL("https://github.com/korn9225-sketch/app-music-storage/releases")
+                    val pageConn = pageUrl.openConnection() as HttpURLConnection
+                    pageConn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    pageConn.connectTimeout = 8000
+                    pageConn.readTimeout = 8000
+                    if (pageConn.responseCode == 200) {
+                        val html = pageConn.inputStream.bufferedReader().readText()
+                        val match = Regex("""href="([^"]+\.apk[^"]*)"""", RegexOption.IGNORE_CASE).find(html)
+                        if (match != null) {
+                            apkPath = match.groupValues[1]
+                        }
+                    }
+                } catch (_: Exception) {}
             }
 
             if (apkPath != null) {
@@ -4418,9 +4666,16 @@ object GitHubAutoUpdater {
     }
 
     private fun isNewerVersion(remoteTag: String, currentTag: String): Boolean {
-        val remoteClean = remoteTag.removePrefix("v").removePrefix("V").trim()
-        val currentClean = currentTag.removePrefix("v").removePrefix("V").trim()
-        return remoteClean != currentClean && remoteClean.isNotBlank()
+        val remoteParts = remoteTag.removePrefix("v").removePrefix("V").trim().split(".").mapNotNull { it.toIntOrNull() }
+        val currentParts = currentTag.removePrefix("v").removePrefix("V").trim().split(".").mapNotNull { it.toIntOrNull() }
+        val maxLen = maxOf(remoteParts.size, currentParts.size)
+        for (i in 0 until maxLen) {
+            val r = remoteParts.getOrElse(i) { 0 }
+            val c = currentParts.getOrElse(i) { 0 }
+            if (r > c) return true
+            if (r < c) return false
+        }
+        return false
     }
 
     suspend fun downloadAndInstallUpdate(context: Context, downloadUrl: String, onProgress: (String) -> Unit): Boolean {
@@ -4430,20 +4685,47 @@ object GitHubAutoUpdater {
                 val apkFile = File(context.cacheDir, "update.apk")
                 if (apkFile.exists()) apkFile.delete()
 
-                val url = URL(downloadUrl)
-                val conn = url.openConnection() as HttpURLConnection
-                conn.setRequestProperty("User-Agent", "ZuneMusicPlayer/1.0")
-                conn.connectTimeout = 10000
-                conn.readTimeout = 15000
+                var currentUrl = downloadUrl
+                var conn: HttpURLConnection? = null
+                var redirectCount = 0
+                val maxRedirects = 10
 
-                if (conn.responseCode == 200) {
+                while (redirectCount < maxRedirects) {
+                    val url = URL(currentUrl)
+                    conn = url.openConnection() as HttpURLConnection
+                    conn.instanceFollowRedirects = false
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                    
+                    // Only pass GITHUB_TOKEN header to github.com domain, not AWS/S3 CDN domain!
+                    if (PlaybackService.GITHUB_TOKEN.isNotBlank() && (url.host.contains("github.com") || url.host.contains("githubapi"))) {
+                        conn.setRequestProperty("Authorization", "Bearer ${PlaybackService.GITHUB_TOKEN}")
+                    }
+                    
+                    conn.connectTimeout = 15000
+                    conn.readTimeout = 30000
+
+                    val code = conn.responseCode
+                    if (code in 300..399) {
+                        val loc = conn.getHeaderField("Location")
+                        if (!loc.isNullOrBlank()) {
+                            currentUrl = if (loc.startsWith("http")) loc else "https://github.com$loc"
+                            redirectCount++
+                            conn.disconnect()
+                            continue
+                        }
+                    }
+                    break
+                }
+
+                if (conn != null && conn.responseCode == 200) {
                     conn.inputStream.use { input ->
                         apkFile.outputStream().use { output ->
                             input.copyTo(output)
                         }
                     }
                 } else {
-                    onProgress("Download failed with HTTP ${conn.responseCode}")
+                    val code = conn?.responseCode ?: -1
+                    onProgress("Download failed with HTTP $code")
                     return@withContext false
                 }
 
@@ -4489,6 +4771,105 @@ object GitHubAutoUpdater {
             context.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+}
+
+@Composable
+fun WearOSRemoteControlScreen(
+    songs: List<Song>,
+    currentSongIndex: Int,
+    isPlaying: Boolean,
+    currentPosition: Long,
+    totalDuration: Long,
+    playerState: Player?
+) {
+    val currentSong = songs.getOrNull(currentSongIndex)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Circular Artwork
+            AsyncImage(
+                model = currentSong?.getVerifiedArtworkUrl(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(86.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Track Title & Artist
+            Text(
+                text = currentSong?.title ?: "No Track Playing",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = currentSong?.artist ?: "Zune Remote",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                color = Color(0xFFE5007D),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Seek Bar
+            Slider(
+                value = if (totalDuration > 0) currentPosition.toFloat() / totalDuration else 0f,
+                onValueChange = { playerState?.seekTo((it * totalDuration).toLong()) },
+                colors = SliderDefaults.colors(
+                    thumbColor = Color(0xFFE5007D),
+                    activeTrackColor = Color(0xFFE5007D),
+                    inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                ),
+                modifier = Modifier.fillMaxWidth(0.85f).height(8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Remote Controls (Prev 🥧, Big Play/Pause ⏸/▶, Next 🌽)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)
+            ) {
+                IconButton(
+                    onClick = { playerState?.seekToPreviousMediaItem() },
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Text("🥧", fontSize = 26.sp)
+                }
+
+                IconButton(
+                    onClick = { if (isPlaying) playerState?.pause() else playerState?.play() },
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Text(if (isPlaying) "⏸" else "▶", fontSize = 34.sp, color = Color(0xFFE5007D))
+                }
+
+                IconButton(
+                    onClick = { playerState?.seekToNextMediaItem() },
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Text("🌽", fontSize = 26.sp)
+                }
+            }
         }
     }
 }

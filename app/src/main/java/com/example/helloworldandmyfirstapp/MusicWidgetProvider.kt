@@ -24,9 +24,9 @@ class MusicWidgetProvider : AppWidgetProvider() {
             if (artist != null) currentArtist = artist
             if (playing != null) isPlaying = playing
 
-            val appWidgetManager = AppWidgetManager.getInstance(context)
+            val appWidgetManager = try { AppWidgetManager.getInstance(context) } catch (_: Exception) { null } ?: return
             val componentName = ComponentName(context, MusicWidgetProvider::class.java)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName) ?: return
+            val appWidgetIds = try { appWidgetManager.getAppWidgetIds(componentName) } catch (_: Exception) { null } ?: return
 
             for (appWidgetId in appWidgetIds) {
                 updateAppWidget(context, appWidgetManager, appWidgetId)
