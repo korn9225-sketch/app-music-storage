@@ -9,10 +9,159 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
+data class YouTubeAlbum(
+    val browseId: String,
+    val title: String,
+    val artist: String,
+    val year: String,
+    val artworkUrl: String
+)
+
 object YouTubeMusicEngine {
     private const val TAG = "YouTubeMusicEngine"
     private const val INNERTUBE_CLIENT_NAME = "WEB_REMIX"
     private const val INNERTUBE_CLIENT_VERSION = "1.20240318.01.00"
+
+    suspend fun searchMusicAlbums(context: Context, query: String): List<YouTubeAlbum> {
+        return withContext(Dispatchers.IO) {
+            val albums = mutableListOf<YouTubeAlbum>()
+            try {
+                val url = URL("https://music.youtube.com/youtubei/v1/search?alt=json")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+
+                val cookies = YouTubeMusicAuthManager.getCookies(context)
+                if (cookies.isNotBlank()) {
+                    conn.setRequestProperty("Cookie", cookies)
+                    val sapisidHash = YouTubeMusicAuthManager.getSapisidHash(cookies)
+                    if (sapisidHash.isNotBlank()) {
+                        conn.setRequestProperty("Authorization", "SAPISIDHASH $sapisidHash")
+                    }
+                }
+
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.doOutput = true
+
+                val payload = JSONObject().apply {
+                    put("context", JSONObject().apply {
+                        put("client", JSONObject().apply {
+                            put("clientName", INNERTUBE_CLIENT_NAME)
+                            put("clientVersion", INNERTUBE_CLIENT_VERSION)
+                        })
+                    })
+                    put("query", "$query album")
+                }
+
+                conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+
+                if (conn.responseCode == 200) {
+                    val responseStr = conn.inputStream.bufferedReader().readText()
+
+                    val albumBrowseRegex = Regex(""""browseId":"(MPREb_[a-zA-Z0-9_-]+)"""")
+                    val titleRegex = Regex(""""title":\{"runs":\[\{"text":"([^"]+)"\}""")
+
+                    val browseMatches = albumBrowseRegex.findAll(responseStr).map { it.groupValues[1] }.distinct().toList()
+                    val titleMatches = titleRegex.findAll(responseStr).map { it.groupValues[1] }.toList()
+
+                    for (i in browseMatches.indices) {
+                        val browseId = browseMatches[i]
+                        val title = titleMatches.getOrElse(i) { "$query Album" }
+
+                        albums.add(
+                            YouTubeAlbum(
+                                browseId = browseId,
+                                title = title,
+                                artist = query,
+                                year = "Album",
+                                artworkUrl = "https://img.youtube.com/vi/default/hqdefault.jpg"
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Search albums error", e)
+            }
+
+            albums.distinctBy { it.browseId }
+        }
+    }
+
+    suspend fun fetchAlbumTracks(
+        context: Context,
+        albumBrowseId: String,
+        albumTitle: String,
+        artistName: String,
+        fallbackArtworkUrl: String
+    ): List<Song> {
+        return withContext(Dispatchers.IO) {
+            val tracks = mutableListOf<Song>()
+            try {
+                val url = URL("https://music.youtube.com/youtubei/v1/browse?alt=json")
+                val conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+
+                val cookies = YouTubeMusicAuthManager.getCookies(context)
+                if (cookies.isNotBlank()) {
+                    conn.setRequestProperty("Cookie", cookies)
+                    val sapisidHash = YouTubeMusicAuthManager.getSapisidHash(cookies)
+                    if (sapisidHash.isNotBlank()) {
+                        conn.setRequestProperty("Authorization", "SAPISIDHASH $sapisidHash")
+                    }
+                }
+
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                conn.doOutput = true
+
+                val payload = JSONObject().apply {
+                    put("context", JSONObject().apply {
+                        put("client", JSONObject().apply {
+                            put("clientName", INNERTUBE_CLIENT_NAME)
+                            put("clientVersion", INNERTUBE_CLIENT_VERSION)
+                        })
+                    })
+                    put("browseId", albumBrowseId)
+                }
+
+                conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
+
+                if (conn.responseCode == 200) {
+                    val responseStr = conn.inputStream.bufferedReader().readText()
+                    val videoIdRegex = Regex(""""videoId":"([a-zA-Z0-9_-]{11})"""")
+                    val titleRegex = Regex(""""title":\{"runs":\[\{"text":"([^"]+)"\}""")
+
+                    val videoMatches = videoIdRegex.findAll(responseStr).map { it.groupValues[1] }.distinct().toList()
+                    val titleMatches = titleRegex.findAll(responseStr).map { it.groupValues[1] }.toList()
+
+                    for (i in videoMatches.indices) {
+                        val videoId = videoMatches[i]
+                        val title = titleMatches.getOrElse(i + 1) { "Track ${i + 1}" }
+                        val thumbUrl = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+                        val streamUrl = "https://www.youtube.com/watch?v=$videoId"
+
+                        tracks.add(
+                            Song(
+                                title = title,
+                                artist = artistName,
+                                album = albumTitle,
+                                url = streamUrl,
+                                artworkUrl = thumbUrl,
+                                isVideo = false
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Fetch album tracks error", e)
+            }
+            tracks.distinctBy { it.url }
+        }
+    }
 
     suspend fun searchMusic(context: Context, query: String): List<Song> {
         return withContext(Dispatchers.IO) {

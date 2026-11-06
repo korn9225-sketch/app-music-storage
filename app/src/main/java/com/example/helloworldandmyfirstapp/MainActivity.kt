@@ -2943,11 +2943,13 @@ fun YouTubeMusicTabScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
-    var searchResults by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var searchAlbums by remember { mutableStateOf<List<YouTubeAlbum>>(emptyList()) }
+    var searchSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var userPlaylists by remember { mutableStateOf<List<Song>>(emptyList()) }
     var isLoadingUserPlaylists by remember { mutableStateOf(false) }
     var isLoggedIn by remember { mutableStateOf(YouTubeMusicAuthManager.isLoggedIn(context)) }
     var showLoginDialog by remember { mutableStateOf(false) }
+    var selectedAlbum by remember { mutableStateOf<YouTubeAlbum?>(null) }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -2976,175 +2978,405 @@ fun YouTubeMusicTabScreen(
         )
     }
 
+    if (selectedAlbum != null) {
+        YouTubeAlbumDetailView(
+            album = selectedAlbum!!,
+            songs = songs,
+            surfaceColor = surfaceColor,
+            textColor = textColor,
+            subTextColor = subTextColor,
+            accentColor = accentColor,
+            onBackClick = { selectedAlbum = null },
+            onSongClick = onSongClick
+        )
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            // Account Status Bar
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = surfaceColor,
+                tonalElevation = 2.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = null,
+                            tint = if (isLoggedIn) Color(0xFF4CAF50) else subTextColor,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = if (isLoggedIn) "YouTube Music Account" else "Guest Mode",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = textColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = if (isLoggedIn) "Connected & Syncing Playlists" else "Sign in to access your library",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = subTextColor
+                            )
+                        }
+                    }
+
+                    if (isLoggedIn) {
+                        OutlinedButton(
+                            onClick = {
+                                YouTubeMusicAuthManager.logout(context)
+                                isLoggedIn = false
+                                userPlaylists = emptyList()
+                                android.widget.Toast.makeText(context, "Logged out of YouTube Music", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
+                        ) {
+                            Text("Log Out", fontSize = 11.sp)
+                        }
+                    } else {
+                        Button(
+                            onClick = { showLoginDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                        ) {
+                            Text("Sign In", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search Artist or Album Discography...", color = subTextColor) },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Search", tint = accentColor)
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotBlank()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear", tint = textColor)
+                        }
+                    }
+                },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = accentColor,
+                    unfocusedBorderColor = textColor.copy(alpha = 0.3f),
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    focusedContainerColor = surfaceColor,
+                    unfocusedContainerColor = surfaceColor
+                ),
+                shape = RoundedCornerShape(14.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = {
+                    if (searchQuery.isBlank() || isSearching) return@Button
+                    isSearching = true
+                    coroutineScope.launch {
+                        val albums = YouTubeMusicEngine.searchMusicAlbums(context, searchQuery)
+                        val tracks = YouTubeMusicEngine.searchMusic(context, searchQuery)
+                        searchAlbums = albums
+                        searchSongs = tracks
+                        isSearching = false
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                enabled = !isSearching && searchQuery.isNotBlank(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (isSearching) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text("Search Albums & Discography", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (isSearching) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = accentColor)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Searching YouTube Music Albums...", color = textColor)
+                    }
+                }
+            } else if (searchAlbums.isNotEmpty() || searchSongs.isNotEmpty()) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (searchAlbums.isNotEmpty()) {
+                        item {
+                            Text("Albums & EPs", style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.Bold)
+                        }
+                        items(searchAlbums) { album ->
+                            YouTubeAlbumCard(album, surfaceColor, textColor, subTextColor, accentColor) {
+                                selectedAlbum = album
+                            }
+                        }
+                    }
+
+                    if (searchSongs.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Top Tracks", style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.Bold)
+                        }
+                        items(searchSongs) { song ->
+                            YouTubeSongItemRow(song, songs, surfaceColor, textColor, subTextColor, accentColor, onSongClick)
+                        }
+                    }
+                }
+            } else if (userPlaylists.isNotEmpty()) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        Text("My Liked Music & Saved Tracks", style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.Bold)
+                    }
+                    items(userPlaylists) { song ->
+                        YouTubeSongItemRow(song, songs, surfaceColor, textColor, subTextColor, accentColor, onSongClick)
+                    }
+                }
+            } else if (isLoadingUserPlaylists) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = accentColor)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Syncing your YouTube Music library...", color = textColor)
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isLoggedIn) "Type an artist name (e.g. Korn, Biohazard) to view their full album discography" else "Sign in above or search an artist name to browse full albums & discographies",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = subTextColor
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun YouTubeAlbumCard(
+    album: YouTubeAlbum,
+    surfaceColor: Color,
+    textColor: Color,
+    subTextColor: Color,
+    accentColor: Color,
+    onAlbumClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onAlbumClick() },
+        color = surfaceColor,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = album.artworkUrl.ifEmpty { "https://img.youtube.com/vi/default/hqdefault.jpg" },
+                contentDescription = null,
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = album.title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${album.artist} • ${album.year}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = subTextColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            IconButton(onClick = onAlbumClick) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "View Album",
+                    tint = accentColor,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun YouTubeAlbumDetailView(
+    album: YouTubeAlbum,
+    songs: MutableList<Song>,
+    surfaceColor: Color,
+    textColor: Color,
+    subTextColor: Color,
+    accentColor: Color,
+    onBackClick: () -> Unit,
+    onSongClick: (Song) -> Unit
+) {
+    val context = LocalContext.current
+    var tracks by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var isLoadingTracks by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(album.browseId) {
+        isLoadingTracks = true
+        tracks = YouTubeMusicEngine.fetchAlbumTracks(
+            context = context,
+            albumBrowseId = album.browseId,
+            albumTitle = album.title,
+            artistName = album.artist,
+            fallbackArtworkUrl = album.artworkUrl
+        )
+        isLoadingTracks = false
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        // Account Status Bar
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Default.Close, contentDescription = "Back", tint = textColor)
+            }
+            Text(
+                text = "Album Details",
+                style = MaterialTheme.typography.titleMedium,
+                color = textColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Album Header
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            shape = RoundedCornerShape(14.dp),
             color = surfaceColor,
-            tonalElevation = 2.dp
+            tonalElevation = 3.dp
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = null,
-                        tint = if (isLoggedIn) Color(0xFF4CAF50) else subTextColor,
-                        modifier = Modifier.size(28.dp)
+                AsyncImage(
+                    model = album.artworkUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = album.title,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = textColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = if (isLoggedIn) "YouTube Music Account" else "Guest Mode",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = textColor,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isLoggedIn) "Connected & Syncing Playlists" else "Sign in to access your library",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = subTextColor
-                        )
-                    }
-                }
-
-                if (isLoggedIn) {
-                    OutlinedButton(
-                        onClick = {
-                            YouTubeMusicAuthManager.logout(context)
-                            isLoggedIn = false
-                            userPlaylists = emptyList()
-                            android.widget.Toast.makeText(context, "Logged out of YouTube Music", android.widget.Toast.LENGTH_SHORT).show()
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
-                    ) {
-                        Text("Log Out", fontSize = 11.sp)
-                    }
-                } else {
-                    Button(
-                        onClick = { showLoginDialog = true },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = accentColor)
-                    ) {
-                        Text("Sign In", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Text(
+                        text = "${album.artist} • ${album.year}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = accentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${tracks.size} Tracks",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = subTextColor
+                    )
                 }
             }
         }
 
-        // Search Bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search YouTube Music...", color = subTextColor) },
-            leadingIcon = {
-                Icon(Icons.Default.Search, contentDescription = "Search", tint = accentColor)
-            },
-            trailingIcon = {
-                if (searchQuery.isNotBlank()) {
-                    IconButton(onClick = { searchQuery = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = textColor)
+        if (isLoadingTracks) {
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = accentColor)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Loading Album Tracklist...", color = textColor)
+                }
+            }
+        } else if (tracks.isNotEmpty()) {
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        val firstTrack = tracks.first()
+                        val playableUrl = YouTubeMusicEngine.resolvePlayableAudioUrl(firstTrack.url)
+                        val playableSong = firstTrack.copy(url = playableUrl)
+                        if (songs.none { it.url == playableSong.url }) {
+                            songs.add(playableSong)
+                        }
+                        onSongClick(playableSong)
                     }
-                }
-            },
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = accentColor,
-                unfocusedBorderColor = textColor.copy(alpha = 0.3f),
-                focusedTextColor = textColor,
-                unfocusedTextColor = textColor,
-                focusedContainerColor = surfaceColor,
-                unfocusedContainerColor = surfaceColor
-            ),
-            shape = RoundedCornerShape(14.dp)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                if (searchQuery.isBlank() || isSearching) return@Button
-                isSearching = true
-                coroutineScope.launch {
-                    val results = YouTubeMusicEngine.searchMusic(context, searchQuery)
-                    searchResults = results
-                    isSearching = false
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-            enabled = !isSearching && searchQuery.isNotBlank(),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            if (isSearching) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                },
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
+                Text("Play Album", fontWeight = FontWeight.Bold, color = Color.White)
             }
-            Text("Search Catalog", fontWeight = FontWeight.Bold, color = Color.White)
-        }
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        if (isSearching) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(180.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = accentColor)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Searching YouTube Music...", color = textColor)
-                }
-            }
-        } else if (searchResults.isNotEmpty()) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    Text("Search Results", style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.Bold)
-                }
-                items(searchResults) { song ->
-                    YouTubeSongItemRow(song, songs, surfaceColor, textColor, subTextColor, accentColor, onSongClick)
-                }
-            }
-        } else if (userPlaylists.isNotEmpty()) {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    Text("My Liked Music & Saved Tracks", style = MaterialTheme.typography.titleMedium, color = accentColor, fontWeight = FontWeight.Bold)
-                }
-                items(userPlaylists) { song ->
-                    YouTubeSongItemRow(song, songs, surfaceColor, textColor, subTextColor, accentColor, onSongClick)
-                }
-            }
-        } else if (isLoadingUserPlaylists) {
-            Box(
-                modifier = Modifier.fillMaxWidth().height(180.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = accentColor)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Syncing your YouTube Music library...", color = textColor)
+                items(tracks) { track ->
+                    YouTubeSongItemRow(track, songs, surfaceColor, textColor, subTextColor, accentColor, onSongClick)
                 }
             }
         } else {
             Box(
-                modifier = Modifier.fillMaxWidth().height(180.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (isLoggedIn) "Type a song or artist name to search" else "Sign in above to load your saved music, or search any song",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = subTextColor
-                )
+                Text("No tracks found for this album", color = subTextColor)
             }
         }
     }
