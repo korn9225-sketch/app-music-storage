@@ -4820,11 +4820,12 @@ object GitHubAutoUpdater {
                     return@withContext UpdateCheckResult.NoApkFound(latestTag)
                 }
 
-                val isNewer = isNewerVersion(newestTagName!!, CURRENT_VERSION_TAG)
+                val tag = newestTagName ?: "latest"
+                val isNewer = tag.equals("latest", ignoreCase = true) || isNewerVersion(tag, CURRENT_VERSION_TAG)
                 if (isNewer) {
-                    return@withContext UpdateCheckResult.NewUpdateAvailable(newestTagName, newestApkUrl, newestBody)
+                    return@withContext UpdateCheckResult.NewUpdateAvailable(tag, newestApkUrl, newestBody)
                 } else {
-                    return@withContext UpdateCheckResult.UpToDate(newestTagName, newestApkUrl)
+                    return@withContext UpdateCheckResult.UpToDate(tag, newestApkUrl)
                 }
             } catch (_: Exception) {
                 return@withContext checkViaWebScraping()
