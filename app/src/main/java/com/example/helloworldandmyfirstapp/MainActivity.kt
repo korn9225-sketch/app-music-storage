@@ -2662,7 +2662,7 @@ fun SettingsView(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "v1.2 ZuneBeta11052026 07:01 PM",
+                text = "v1.3 ZuneBeta11052026 09:53 PM",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
@@ -3941,7 +3941,7 @@ sealed class UpdateCheckResult {
 }
 
 object GitHubAutoUpdater {
-    const val CURRENT_VERSION_TAG = "v1.1"
+    const val CURRENT_VERSION_TAG = "v1.2"
 
     suspend fun checkForUpdatesResult(): UpdateCheckResult {
         return withContext(Dispatchers.IO) {
