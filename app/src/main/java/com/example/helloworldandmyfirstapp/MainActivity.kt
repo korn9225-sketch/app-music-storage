@@ -2572,6 +2572,13 @@ fun SettingsView(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "FUCK OFF",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.Red
+            )
         }
 
         Spacer(modifier = Modifier.height(140.dp))
