@@ -148,6 +148,8 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
@@ -2486,6 +2488,7 @@ fun SettingsView(
                                     updateStatusMessage = "Update check failed: ${result.message}"
                                 }
                             }
+                            UpdateLogger.logUpdate(context, GitHubAutoUpdater.CURRENT_VERSION_TAG, "Checked Updates", updateStatusMessage)
                             isCheckingUpdate = false
                         }
                     },
@@ -2509,6 +2512,7 @@ fun SettingsView(
                             coroutineScope.launch {
                                 GitHubAutoUpdater.downloadAndInstallUpdate(context, latestApkUrl!!) { status ->
                                     updateStatusMessage = status
+                                    UpdateLogger.logUpdate(context, GitHubAutoUpdater.CURRENT_VERSION_TAG, "Installed APK", status)
                                 }
                                 isCheckingUpdate = false
                             }
@@ -2518,6 +2522,19 @@ fun SettingsView(
                     ) {
                         Text("Force Download & Reinstall APK", fontWeight = FontWeight.Bold)
                     }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = {
+                        UpdateLogger.exportToGoogleDriveOrSheets(context)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF00E5FF))
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Export Update Log (Google Drive / Sheets)", fontWeight = FontWeight.Bold)
                 }
 
                 if (updateStatusMessage.isNotBlank()) {
@@ -3760,6 +3777,59 @@ object FlashlightStrobeManager {
             val cameraId = cameraManager?.cameraIdList?.firstOrNull() ?: return
             cameraManager.setTorchMode(cameraId, false)
         } catch (_: Exception) {}
+    }
+}
+
+object UpdateLogger {
+    private const val LOG_FILE_NAME = "Update_Log_ZunePlayer.csv"
+
+    fun logUpdate(context: Context, versionTag: String, status: String, notes: String) {
+        try {
+            val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "ZunePlayer")
+            if (!dir.exists()) dir.mkdirs()
+            val logFile = File(dir, LOG_FILE_NAME)
+
+            val exists = logFile.exists()
+            val time = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
+            val line = "\"$time\",\"$versionTag\",\"${CodeStats.LINE_COUNT}\",\"$status\",\"${notes.replace("\"", "'")}\"\n"
+
+            if (!exists) {
+                logFile.writeText("Timestamp,VersionTag,LinesOfCode,Status,ReleaseNotes\n")
+            }
+            logFile.appendText(line)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun getLogFile(context: Context): File {
+        val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "ZunePlayer")
+        if (!dir.exists()) dir.mkdirs()
+        val logFile = File(dir, LOG_FILE_NAME)
+        if (!logFile.exists()) {
+            logFile.writeText("Timestamp,VersionTag,LinesOfCode,Status,ReleaseNotes\n")
+            logFile.appendText("\"${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())}\",\"${GitHubAutoUpdater.CURRENT_VERSION_TAG}\",\"${CodeStats.LINE_COUNT}\",\"Initial Log Created\",\"Zune Player Version Log\"\n")
+        }
+        return logFile
+    }
+
+    fun exportToGoogleDriveOrSheets(context: Context) {
+        try {
+            val logFile = getLogFile(context)
+            val authority = "${context.packageName}.fileprovider"
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, logFile)
+
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/csv"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_SUBJECT, "Zune Player Update Log CSV")
+                putExtra(Intent.EXTRA_TEXT, "Here is the Zune Player update history log (CSV spreadsheet format for Google Drive / Google Sheets).")
+                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(Intent.createChooser(intent, "Save/Upload Update Log (Google Drive / Sheets)"))
+        } catch (e: Exception) {
+            Toast.makeText(context, "Export error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
