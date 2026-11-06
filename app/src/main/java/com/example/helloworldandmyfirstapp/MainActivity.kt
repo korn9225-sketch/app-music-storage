@@ -2713,7 +2713,7 @@ fun SongList(songs: List<Song>, onSongClick: (Int) -> Unit, onDownloadClick: (So
     val context = LocalContext.current
     val audioSongs = remember(songs) {
         songs.filter { !it.isVideo }
-            .sortedWith(compareBy<Song> { it.artist }.thenBy { it.album }.thenBy { extractTrackNumber(it.title) }.thenBy { it.title })
+            .sortedWith(compareBy<Song> { it.artist }.thenBy { it.album }.thenBy { extractTrackNumber(it) }.thenBy { it.title })
     }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 340.dp),
@@ -2935,14 +2935,133 @@ fun ArtistList(songs: List<Song>, onArtistClick: (String) -> Unit) {
     }
 }
 
-private fun extractTrackNumber(title: String): Int {
-    val trimmed = title.trim()
-    val match = Regex("^(\\d+)").find(trimmed)
-    if (match != null) {
-        return match.groupValues[1].toIntOrNull() ?: Int.MAX_VALUE
+val officialTrackCatalog: Map<Pair<String, String>, Int> = mapOf(
+    // Danny Diablo - Dollerz Make Sense
+    Pair("danny diablo", "intro") to 1,
+    Pair("danny diablo", "ill roc soldiers ft. stikman") to 2,
+    Pair("danny diablo", "stready minds ft. diggy ill-roc") to 3,
+    Pair("danny diablo", "grimey ft. stikman") to 4,
+    Pair("danny diablo", "smash everything ft. stikman") to 5,
+    Pair("danny diablo", "queens & jersey ft. stikman") to 6,
+    Pair("danny diablo", "spit fire ft. diggy ill-roc, wes nihil & tony slippaz") to 7,
+    Pair("danny diablo", "remember my name ft. christian koresh & diggy ill-roc") to 8,
+    Pair("danny diablo", "the foundation ft. stikman") to 9,
+    Pair("danny diablo", "in the city ft. joey d") to 10,
+
+    // Korn - Follow the Leader
+    Pair("korn", "it's on") to 1,
+    Pair("korn", "freak on a leash") to 2,
+    Pair("korn", "got the life") to 3,
+    Pair("korn", "dead bodies everywhere") to 4,
+    Pair("korn", "children of the korn") to 5,
+    Pair("korn", "b.b.k.") to 6,
+    Pair("korn", "pretty") to 7,
+    Pair("korn", "all in the family") to 8,
+    Pair("korn", "reclaim my place") to 9,
+    Pair("korn", "justin") to 10,
+    Pair("korn", "seed") to 11,
+    Pair("korn", "cameltosis") to 12,
+    Pair("korn", "my gift to you") to 13,
+    Pair("korn", "earache my eye") to 14,
+
+    // Morgan Wallen - One Thing At A Time
+    Pair("morgan wallen", "born with a beer in my hand") to 1,
+    Pair("morgan wallen", "last night") to 2,
+    Pair("morgan wallen", "everything i love") to 3,
+    Pair("morgan wallen", "man made a bar") to 4,
+    Pair("morgan wallen", "devil don't know") to 5,
+    Pair("morgan wallen", "one thing at a time") to 6,
+    Pair("morgan wallen", "98 braves") to 7,
+    Pair("morgan wallen", "ain't that some") to 8,
+    Pair("morgan wallen", "i wrote the book") to 9,
+    Pair("morgan wallen", "tennessee numbers") to 10,
+    Pair("morgan wallen", "hope that's true") to 11,
+    Pair("morgan wallen", "whiskey friends") to 12,
+    Pair("morgan wallen", "sunrise") to 13,
+    Pair("morgan wallen", "keith whitley") to 14,
+    Pair("morgan wallen", "in the bible") to 15,
+    Pair("morgan wallen", "you proof") to 16,
+    Pair("morgan wallen", "thought you should know") to 17,
+    Pair("morgan wallen", "f150-50") to 18,
+    Pair("morgan wallen", "neon star") to 19,
+    Pair("morgan wallen", "i deserve a drink") to 20,
+    Pair("morgan wallen", "wine into water") to 21,
+    Pair("morgan wallen", "me + all your reasons") to 22,
+    Pair("morgan wallen", "tennessee fan") to 23,
+    Pair("morgan wallen", "money on me") to 24,
+    Pair("morgan wallen", "thinkin' bout me") to 25,
+    Pair("morgan wallen", "single than she was") to 26,
+    Pair("morgan wallen", "days that end in why") to 27,
+    Pair("morgan wallen", "last drive down main") to 28,
+    Pair("morgan wallen", "me to me") to 29,
+    Pair("morgan wallen", "don't think jesus") to 30,
+    Pair("morgan wallen", "180 lifestyle") to 31,
+    Pair("morgan wallen", "had it") to 32,
+    Pair("morgan wallen", "cowgirls") to 33,
+    Pair("morgan wallen", "good girl gone missin'") to 34,
+    Pair("morgan wallen", "outlook") to 35,
+    Pair("morgan wallen", "dying man") to 36,
+
+    // Biohazard - Kill Or Be Killed
+    Pair("biohazard", "intro") to 1,
+    Pair("biohazard", "world on fire") to 2,
+    Pair("biohazard", "never forgive never forget") to 3,
+    Pair("biohazard", "kill or be killed") to 4,
+    Pair("biohazard", "heads kicked in") to 5,
+    Pair("biohazard", "beaten senseless") to 6,
+    Pair("biohazard", "make my stand") to 7,
+    Pair("biohazard", "open your eyes") to 8,
+    Pair("biohazard", "penalty") to 9,
+    Pair("biohazard", "dead to me") to 10,
+    Pair("biohazard", "hallowed ground") to 11,
+
+    // Biohazard - Uncivilization
+    Pair("biohazard", "sellout") to 1,
+    Pair("biohazard", "uncivilization") to 2,
+    Pair("biohazard", "wide awake") to 3,
+    Pair("biohazard", "get away") to 4,
+    Pair("biohazard", "unified") to 5,
+    Pair("biohazard", "gone") to 6,
+    Pair("biohazard", "letter go") to 7,
+    Pair("biohazard", "last man standing") to 8,
+    Pair("biohazard", "hffk") to 9,
+    Pair("biohazard", "domination") to 10,
+    Pair("biohazard", "trap") to 11,
+    Pair("biohazard", "plastic") to 12,
+    Pair("biohazard", "cross the line") to 13,
+    Pair("biohazard", "a.t.f.") to 14,
+    Pair("biohazard", "life of my own") to 15,
+    Pair("biohazard", "sex and violence") to 16,
+
+    // NOFX
+    Pair("nofx", "the decline") to 1
+)
+
+private fun extractTrackNumber(song: Song): Int {
+    val artistLower = song.artist.trim().lowercase()
+    val titleLower = song.title.trim().lowercase()
+
+    val key = Pair(artistLower, titleLower)
+    val catalogNum = officialTrackCatalog[key]
+    if (catalogNum != null) return catalogNum
+
+    val partialMatch = officialTrackCatalog.entries.firstOrNull { (k, _) ->
+        k.first == artistLower && (k.second.contains(titleLower) || titleLower.contains(k.second))
     }
-    val secondaryMatch = Regex("(\\d+)").find(trimmed)
-    return secondaryMatch?.groupValues?.get(1)?.toIntOrNull() ?: Int.MAX_VALUE
+    if (partialMatch != null) return partialMatch.value
+
+    val titleMatch = Regex("^(\\d+)").find(song.title.trim())
+    if (titleMatch != null) {
+        return titleMatch.groupValues[1].toIntOrNull() ?: Int.MAX_VALUE
+    }
+
+    val fileName = song.url.substringAfterLast("/")
+    val urlMatch = Regex("(?:^|/|\\b|_|-)(\\d{1,3})(?:[._\\s-]|\$)").find(fileName)
+    if (urlMatch != null) {
+        return urlMatch.groupValues[1].toIntOrNull() ?: Int.MAX_VALUE
+    }
+
+    return Int.MAX_VALUE
 }
 
 @Composable
@@ -2958,7 +3077,7 @@ fun ArtistDetailView(
     val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
     val artistSongs = remember(artist, audioSongs) {
         audioSongs.filter { it.artist == artist }
-            .sortedWith(compareBy<Song> { extractTrackNumber(it.title) }.thenBy { it.title })
+            .sortedWith(compareBy<Song> { extractTrackNumber(it) }.thenBy { it.title })
     }
     val albums = remember(artistSongs) { artistSongs.map { it.album }.distinct() }
     var expandedAlbums by remember { mutableStateOf(setOf<String>()) }
@@ -2985,7 +3104,10 @@ fun ArtistDetailView(
                 Text("Albums", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = Color.White, modifier = Modifier.padding(vertical = 4.dp))
             }
             items(albums) { album ->
-                val albumSongs = remember(album, artistSongs) { artistSongs.filter { it.album == album } }
+                val albumSongs = remember(album, artistSongs) {
+                    artistSongs.filter { it.album == album }
+                        .sortedWith(compareBy<Song> { extractTrackNumber(it) }.thenBy { it.title })
+                }
                 val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
                 val isExpanded = expandedAlbums.contains(album)
 
@@ -3249,7 +3371,7 @@ fun AlbumDetailView(
     val audioSongs = remember(songs) { songs.filter { !it.isVideo } }
     val albumSongs = remember(album, audioSongs) {
         audioSongs.filter { it.album == album }
-            .sortedWith(compareBy<Song> { extractTrackNumber(it.title) }.thenBy { it.title })
+            .sortedWith(compareBy<Song> { extractTrackNumber(it) }.thenBy { it.title })
     }
     val albumArt = albumSongs.firstOrNull()?.getVerifiedArtworkUrl()
 
