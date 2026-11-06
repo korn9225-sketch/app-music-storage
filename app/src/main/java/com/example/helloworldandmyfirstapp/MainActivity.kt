@@ -434,6 +434,7 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     viewModel.initController(context, songs)
+                    UpdateLogger.checkAndAutoLogVersionChange(context)
 
                     val autoLocalSongs = scanLocalDeviceMedia(context)
                     autoLocalSongs.forEach { localSong ->
@@ -3781,7 +3782,22 @@ object FlashlightStrobeManager {
 }
 
 object UpdateLogger {
-    private const val LOG_FILE_NAME = "Update_Log_ZunePlayer.csv"
+    private const val LOG_FILE_NAME = "Zune_Player_All_Updates.csv"
+
+    fun checkAndAutoLogVersionChange(context: Context) {
+        try {
+            val prefs = context.getSharedPreferences("media_prefs", Context.MODE_PRIVATE)
+            val lastVersion = prefs.getString("last_logged_version_tag", "")
+            val currentVersion = GitHubAutoUpdater.CURRENT_VERSION_TAG
+
+            if (lastVersion != currentVersion) {
+                logUpdate(context, currentVersion, "Auto Version Launch", "App version $currentVersion launched")
+                prefs.edit().putString("last_logged_version_tag", currentVersion).apply()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     fun logUpdate(context: Context, versionTag: String, status: String, notes: String) {
         try {
