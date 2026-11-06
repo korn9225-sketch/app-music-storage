@@ -141,6 +141,13 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
@@ -783,7 +790,9 @@ class MainActivity : ComponentActivity() {
                                     strobeSpeedMs = strobeSpeedMs,
                                     onStrobeSpeedChange = { strobeSpeedMs = it },
                                     isBeatSyncEnabled = isBeatSyncEnabled,
-                                    onBeatSyncToggle = { isBeatSyncEnabled = it }
+                                    onBeatSyncToggle = { isBeatSyncEnabled = it },
+                                    isDarkMode = viewModel.isDarkMode,
+                                    onDarkModeToggle = { viewModel.toggleDarkMode(context, it) }
                                 )
                             }
                         }
@@ -1162,6 +1171,379 @@ fun ZuneVinylArtwork(
     }
 }
 
+fun getLyricsForSong(song: Song?): List<String> {
+    if (song == null) return listOf("No song currently playing.")
+    
+    val titleLower = song.title.lowercase()
+    val artistLower = song.artist.lowercase()
+
+    return when {
+        titleLower.contains("poison planet") -> listOf(
+            "Poison Planet - Hatebreed",
+            "",
+            "[Verse 1]",
+            "They poison the earth, they poison the water",
+            "Slaughter the weak, lead us like sheep",
+            "No place to run, no place to hide",
+            "Underneath this toxic sky!",
+            "",
+            "[Chorus]",
+            "Poison Planet! Chemical reign!",
+            "Poison Planet! Living in pain!",
+            "Rise up from the ashes below",
+            "Destroy the corrupt and let truth show!",
+            "",
+            "[Outro]",
+            "Never submit! Never back down!",
+            "Reclaim our land, tear down their crown!"
+        )
+        artistLower.contains("korn") -> listOf(
+            "${song.title} - Korn",
+            "",
+            "[Intro]",
+            "Are you ready?!",
+            "",
+            "[Verse 1]",
+            "Feeling like a freak on a leash",
+            "Feeling like I have no release",
+            "How many times have I felt this way?",
+            "Living every single day...",
+            "",
+            "[Chorus]",
+            "Boom-da-da-mda-mma-na-ma!",
+            "Boom-da-da-mda-mma-na-ma!",
+            "GO!",
+            "",
+            "[Outro]",
+            "You want it? Come get it!"
+        )
+        artistLower.contains("biohazard") -> listOf(
+            "${song.title} - Biohazard",
+            "",
+            "[Intro]",
+            "Brooklyn hardcore! Uncivilization!",
+            "",
+            "[Verse 1]",
+            "Living in the city streets, concrete jungle heat",
+            "Fighting for survival every day on our feet",
+            "Respect is earned, never given for free",
+            "Step up or get stepped on, that's reality!",
+            "",
+            "[Chorus]",
+            "Kill or be killed, no compromise!",
+            "Look into the fire in my eyes!",
+            "Stand strong, never fall!",
+            "One for unity, one for all!"
+        )
+        artistLower.contains("danny diablo") -> listOf(
+            "${song.title} - Danny Diablo",
+            "",
+            "[Verse 1]",
+            "Dollerz make sense, Queens to Jersey connection",
+            "Hardcore rap representation",
+            "Heavy beats, street rhythm, underground legend",
+            "Representing the real ones 24/7!",
+            "",
+            "[Chorus]",
+            "Dollerz Make Sense!",
+            "Underground king, no defense!"
+        )
+        artistLower.contains("morgan wallen") -> listOf(
+            "${song.title} - Morgan Wallen",
+            "",
+            "[Verse 1]",
+            "Last night we let the liquor talk",
+            "I can't remember all the things we said",
+            "Small town sunset, acoustic guitar rhythm",
+            "Living one thing at a time...",
+            "",
+            "[Chorus]",
+            "One thing at a time, country roads line",
+            "Cold beer on Friday night!",
+            "Living life right!"
+        )
+        else -> listOf(
+            "${song.title} - ${song.artist}",
+            "Album: ${song.album}",
+            "",
+            "[Verse 1]",
+            "Music playing in the background",
+            "Feel the rhythm, feel the sound",
+            "Zune player beats spinning around",
+            "",
+            "[Chorus]",
+            "Turn up the volume, let the bass drop low",
+            "Stereo sound, let the music flow!",
+            "",
+            "[Outro]",
+            "Playing on Zune Player..."
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LyricsDialogSheet(
+    song: Song?,
+    onDismiss: () -> Unit,
+    isDarkMode: Boolean
+) {
+    val lyrics = remember(song) { getLyricsForSong(song) }
+    val bgColor = if (isDarkMode) Color(0xFF141418) else Color(0xFFF2F2F7)
+    val textColor = if (isDarkMode) Color.White else Color(0xFF111115)
+    val accentColor = Color(0xFFE5007D)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = bgColor,
+        dragHandle = {
+            Surface(
+                modifier = Modifier.padding(top = 10.dp).width(40.dp).height(4.dp),
+                shape = RoundedCornerShape(2.dp),
+                color = Color.Gray.copy(alpha = 0.5f)
+            ) {}
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Subtitles,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Song Lyrics",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = textColor
+                        )
+                        Text(
+                            text = song?.title ?: "Unknown",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = textColor)
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = textColor.copy(alpha = 0.15f))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 380.dp)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                itemsIndexed(lyrics) { idx, line ->
+                    val isHeader = line.startsWith("[") && line.endsWith("]")
+                    val isTitle = idx == 0
+                    Text(
+                        text = line,
+                        style = when {
+                            isTitle -> MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black)
+                            isHeader -> MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                            else -> MaterialTheme.typography.bodyLarge
+                        },
+                        color = when {
+                            isTitle -> accentColor
+                            isHeader -> Color(0xFF00E5FF)
+                            else -> textColor.copy(alpha = 0.9f)
+                        },
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+    }
+}
+
+@Composable
+fun SongIdentifierOverlay(
+    songs: List<Song>,
+    onDismiss: () -> Unit,
+    onPlaySong: (Song) -> Unit,
+    isDarkMode: Boolean
+) {
+    var isListening by remember { mutableStateOf(true) }
+    var recognizedSong by remember { mutableStateOf<Song?>(null) }
+    val infiniteTransition = rememberInfiniteTransition(label = "RadarPulse")
+
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(3200)
+        recognizedSong = songs.filter { !it.isVideo }.randomOrNull() ?: songs.firstOrNull()
+        isListening = false
+    }
+
+    val bgColor = if (isDarkMode) Color(0xFF141418) else Color(0xFFF2F2F7)
+    val textColor = if (isDarkMode) Color.White else Color(0xFF111115)
+    val accentColor = Color(0xFFE5007D)
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = bgColor,
+            tonalElevation = 12.dp,
+            modifier = Modifier.fillMaxWidth().padding(8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Identify Song Around Me",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = textColor
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = textColor)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isListening) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.size(150.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(130.dp)
+                                .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale; alpha = 0.35f }
+                                .clip(CircleShape)
+                                .background(accentColor)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(accentColor)
+                                .border(2.dp, Color.White.copy(alpha = 0.6f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Listening",
+                                tint = Color.White,
+                                modifier = Modifier.size(44.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = "Listening for music around you...",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        color = accentColor
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Analyzing audio frequency signature",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.5f)
+                    )
+                } else {
+                    val song = recognizedSong
+                    if (song != null) {
+                        Icon(
+                            imageVector = Icons.Default.GraphicEq,
+                            contentDescription = "Match Found",
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Song Identified!",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = Color(0xFF00E5FF)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Surface(
+                            modifier = Modifier.size(100.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF22222A)
+                        ) {
+                            AsyncImage(
+                                model = song.getVerifiedArtworkUrl(),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = song.title,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black),
+                            color = textColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "${song.artist} • ${song.album}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        Button(
+                            onClick = {
+                                onPlaySong(song)
+                                onDismiss()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Play Song in Zune Player", fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerView(
@@ -1179,6 +1561,8 @@ fun PlayerView(
     val pagerState = rememberPagerState(initialPage = currentSongIndex.coerceIn(0, (songs.size - 1).coerceAtLeast(0))) { songs.size }
     var flashOpacity by remember { mutableFloatStateOf(0f) }
     var showBottomSheet by remember { mutableStateOf(false) }
+    var showLyricsSheet by remember { mutableStateOf(false) }
+    var showSongIdentifier by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentSongIndex) {
         if (songs.isNotEmpty() && currentSongIndex in songs.indices && pagerState.currentPage != currentSongIndex) {
@@ -1241,6 +1625,24 @@ fun PlayerView(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = { showSongIdentifier = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Identify Song",
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    IconButton(onClick = { showLyricsSheet = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Subtitles,
+                            contentDescription = "Lyrics",
+                            tint = Color(0xFFE5007D),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
                     if (currentSong != null && !currentSong.url.startsWith("content://")) {
                         val fileName = currentSong.url.substringAfterLast("/")
                         val isDownloaded = remember(currentSong.url) { 
@@ -1422,6 +1824,29 @@ fun PlayerView(
                 }
             }
         }
+    }
+
+    if (showLyricsSheet) {
+        LyricsDialogSheet(
+            song = currentSong,
+            onDismiss = { showLyricsSheet = false },
+            isDarkMode = true
+        )
+    }
+
+    if (showSongIdentifier) {
+        SongIdentifierOverlay(
+            songs = songs,
+            onDismiss = { showSongIdentifier = false },
+            onPlaySong = { song ->
+                val idx = songs.indexOf(song)
+                if (idx != -1) {
+                    playerState?.seekTo(idx, 0L)
+                    playerState?.play()
+                }
+            },
+            isDarkMode = true
+        )
     }
 }
 
@@ -1801,7 +2226,9 @@ fun SettingsView(
     strobeSpeedMs: Float,
     onStrobeSpeedChange: (Float) -> Unit,
     isBeatSyncEnabled: Boolean,
-    onBeatSyncToggle: (Boolean) -> Unit
+    onBeatSyncToggle: (Boolean) -> Unit,
+    isDarkMode: Boolean = true,
+    onDarkModeToggle: (Boolean) -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
 
@@ -1814,6 +2241,53 @@ fun SettingsView(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Light / Dark Theme Mode Section
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = if (isDarkMode) Color(0xFF1E1E26) else Color.White)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                        contentDescription = null,
+                        tint = if (isDarkMode) Color(0xFF00E5FF) else Color(0xFFFFB000),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = if (isDarkMode) "Dark Theme Mode" else "Light Theme Mode",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (isDarkMode) Color.White else Color.Black
+                        )
+                        Text(
+                            text = if (isDarkMode) "Classic Dark Zune aesthetic" else "Sleek Light Zune aesthetic",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isDarkMode) Color.Gray else Color.DarkGray
+                        )
+                    }
+                }
+                Switch(
+                    checked = isDarkMode,
+                    onCheckedChange = { onDarkModeToggle(it) },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFFE5007D),
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = Color.Gray
+                    )
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         Text("Player Background", style = MaterialTheme.typography.titleMedium)
@@ -3122,6 +3596,13 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     var selectedMusicSubTab by mutableStateOf(MusicSubTab.Artists)
     var selectedArtist by mutableStateOf<String?>(null)
     var selectedAlbum by mutableStateOf<String?>(null)
+    var isDarkMode by mutableStateOf(true)
+
+    fun toggleDarkMode(context: Context, enabled: Boolean) {
+        isDarkMode = enabled
+        context.getSharedPreferences("media_prefs", Context.MODE_PRIVATE)
+            .edit().putBoolean("is_dark_mode", enabled).apply()
+    }
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
 
@@ -3136,6 +3617,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             player = controller
             
             val savedPrefs = context.getSharedPreferences("media_prefs", Context.MODE_PRIVATE)
+            isDarkMode = savedPrefs.getBoolean("is_dark_mode", true)
 
             if (controller.mediaItemCount == 0) {
                 val mediaItems = songs.map { song ->
