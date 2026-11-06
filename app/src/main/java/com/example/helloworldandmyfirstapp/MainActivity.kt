@@ -445,7 +445,12 @@ class MainActivity : ComponentActivity() {
 
                     val (fetchedSongs, _) = fetchRepoSongsFromGitHub()
                     fetchedSongs.forEach { newSong ->
-                        if (songs.none { it.url == newSong.url }) {
+                        val newKey = "${newSong.artist.lowercase()}_${newSong.title.lowercase().replace(Regex("[^a-z0-9]"), "")}"
+                        val exists = songs.any { song ->
+                            val existingKey = "${song.artist.lowercase()}_${song.title.lowercase().replace(Regex("[^a-z0-9]"), "")}"
+                            song.url == newSong.url || existingKey == newKey
+                        }
+                        if (!exists) {
                             songs.add(newSong)
                         }
                     }
@@ -1960,12 +1965,17 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                     lowerName.endsWith(".mov")
 
             if (isAudio || isVideo) {
-                val cleanTitle = fileName
-                    .substringBeforeLast(".")
-                    .replace("_", " ")
-                    .replace("-", " ")
-                    .replace(Regex("^\\d+[.\\s_-]*"), "")
+                val rawBase = fileName.substringBeforeLast(".")
+                val stripped = rawBase
+                    .replace(Regex("^(?:\\d+[._\\s-]*)*(?:Hatebreed|Korn|Biohazard|NOFX|Morgan Wallen|Danny Diablo|Mudvayne)[._\\s-]*", RegexOption.IGNORE_CASE), "")
+                    .replace(Regex("^\\d+[._\\s-]*"), "")
                     .trim()
+
+                val cleanTitle = if (stripped.isNotBlank()) {
+                    stripped.replace(".", " ").replace("_", " ").replace("-", " ").replace(Regex("\\s+"), " ").trim()
+                } else {
+                    rawBase.replace(".", " ").replace("_", " ").replace("-", " ").trim()
+                }
 
                 val parsedArtist = when {
                     lowerPath.contains("danny") -> "Danny Diablo"
