@@ -70,6 +70,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.runtime.mutableLongStateOf
@@ -2408,6 +2412,8 @@ private fun PyroSeekBar(
     val phase = if (isPlaying) animatedPhase else 0.45f
     val flicker = if (isPlaying) animatedFlicker else 0.92f
     val isNofx = artist?.contains("NOFX", ignoreCase = true) == true
+    val isKorn = artist?.contains("Korn", ignoreCase = true) == true
+    val kornLogoBitmap = if (isKorn) ImageBitmap.imageResource(id = R.drawable.korn_logo) else null
 
     Box(
         modifier = Modifier
@@ -2469,6 +2475,148 @@ private fun PyroSeekBar(
                                 strokeWidth = 1.5.dp.toPx(),
                                 cap = StrokeCap.Round,
                                 alpha = 0.75f - index * 0.15f
+                            )
+                        }
+                    }
+                } else if (isKorn && kornLogoBitmap != null) {
+                    val darkRedTrack = Color(0xFF2A0808)
+                    val fireRedStart = Color(0xFFFF1744)
+                    val fireOrangeMid = Color(0xFFFF6D00)
+                    val fireGoldEnd = Color(0xFFFFD54F)
+
+                    drawLine(
+                        color = darkRedTrack,
+                        start = Offset(trackStart, trackY),
+                        end = Offset(trackEnd, trackY),
+                        strokeWidth = 6.dp.toPx(),
+                        cap = StrokeCap.Round
+                    )
+
+                    if (centerX > trackStart) {
+                        drawLine(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(fireRedStart, fireOrangeMid, fireGoldEnd),
+                                startX = trackStart,
+                                endX = centerX
+                            ),
+                            start = Offset(trackStart, trackY),
+                            end = Offset(centerX, trackY),
+                            strokeWidth = 8.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            alpha = 0.45f
+                        )
+                        drawLine(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(fireRedStart, Color(0xFFFFAB00), Color(0xFFFFF59D)),
+                                startX = trackStart,
+                                endX = centerX
+                            ),
+                            start = Offset(trackStart, trackY),
+                            end = Offset(centerX, trackY),
+                            strokeWidth = 3.5.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+
+                    val flameSpacing = 8.dp.toPx()
+                    var flameX = trackStart + flameSpacing * 0.5f
+                    var flameIndex = 0
+                    while (flameX < centerX - 4.dp.toPx()) {
+                        val flamePhase = phase * 6.28318f + flameIndex * 1.31f
+                        val flameFlicker = 0.5f + 0.5f * kotlin.math.sin(flamePhase)
+                        val flameW = 13.dp.toPx() * flicker
+                        val flameH = (11.dp.toPx() + 10.dp.toPx() * flameFlicker) * flicker
+                        val flameVar = kotlin.math.sin(flamePhase * 0.73f) * 0.35f
+                        drawFireBandFlame(
+                            flameX,
+                            baseY,
+                            flameW,
+                            flameH,
+                            flameVar,
+                            Color(0xFFFF3D00)
+                        )
+                        drawFireBandFlame(
+                            flameX,
+                            baseY,
+                            flameW * 0.45f,
+                            flameH * 0.6f,
+                            flameVar,
+                            Color(0xFFFFD54F)
+                        )
+                        flameX += flameSpacing
+                        flameIndex++
+                    }
+
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0xFFFF3D00).copy(alpha = 0.65f), Color(0xFFFF9100).copy(alpha = 0.3f), Color.Transparent),
+                            center = Offset(centerX, trackY),
+                            radius = 32.dp.toPx() * flicker
+                        ),
+                        radius = 32.dp.toPx() * flicker,
+                        center = Offset(centerX, trackY)
+                    )
+
+                    drawFireBandFlame(
+                        centerX,
+                        baseY + 2.dp.toPx(),
+                        flameWidth * 1.4f,
+                        flameHeight * 1.3f,
+                        kotlin.math.sin(phase * 6.28318f) * 0.35f,
+                        Color(0xFFFF1744)
+                    )
+                    drawFireBandFlame(
+                        centerX,
+                        baseY,
+                        flameWidth * 0.9f,
+                        flameHeight * 0.9f,
+                        kotlin.math.sin(phase * 6.28318f + 1f) * 0.35f,
+                        Color(0xFFFFAB00)
+                    )
+
+                    val logoHeightPx = 32.dp.toPx() * flicker
+                    val logoWidthPx = logoHeightPx * (kornLogoBitmap.width.toFloat() / kornLogoBitmap.height.toFloat())
+                    val logoLeft = (centerX - logoWidthPx / 2f).toInt()
+                    val logoTop = (trackY - logoHeightPx / 2f - 2.dp.toPx()).toInt()
+
+                    drawImage(
+                        image = kornLogoBitmap,
+                        dstOffset = IntOffset(logoLeft + (1.5f * density).toInt(), logoTop + (2f * density).toInt()),
+                        dstSize = IntSize(logoWidthPx.toInt(), logoHeightPx.toInt()),
+                        colorFilter = ColorFilter.tint(Color(0xFF800000))
+                    )
+
+                    val logoColor = if (isPlaying) {
+                        val colorPhase = (kotlin.math.sin(phase * 6.28318f) * 0.5f + 0.5f)
+                        Color(
+                            red = 1.0f,
+                            green = 0.85f + 0.15f * colorPhase,
+                            blue = 0.7f + 0.3f * colorPhase
+                        )
+                    } else {
+                        Color(0xFFFFF0F0)
+                    }
+
+                    drawImage(
+                        image = kornLogoBitmap,
+                        dstOffset = IntOffset(logoLeft, logoTop),
+                        dstSize = IntSize(logoWidthPx.toInt(), logoHeightPx.toInt()),
+                        colorFilter = ColorFilter.tint(logoColor)
+                    )
+
+                    if (isPlaying) {
+                        repeat(6) { index ->
+                            val rise = (phase + index * 0.22f) % 1f
+                            val drift = kotlin.math.sin((phase + index * 0.53f) * 6.28318f)
+                            val side = if (index % 2 == 0) -1f else 1f
+                            val sparkX = centerX + side * (7.dp.toPx() + drift * 10.dp.toPx())
+                            val sparkY = baseY - rise * 35.dp.toPx()
+                            val alpha = (1f - rise) * 0.95f
+                            drawCircle(
+                                color = if (index % 3 == 0) Color(0xFFFF1744) else if (index % 3 == 1) Color(0xFFFFAB00) else Color(0xFFFFF59D),
+                                radius = (1.2f + (1f - rise) * 1.3f) * density,
+                                center = Offset(sparkX, sparkY),
+                                alpha = alpha
                             )
                         }
                     }
