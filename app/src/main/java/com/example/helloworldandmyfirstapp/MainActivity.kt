@@ -83,6 +83,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
@@ -1760,6 +1761,15 @@ fun PlayerView(
             artworkUrl = currentSong?.getVerifiedArtworkUrl()
         )
 
+        // Freak on a Leash iconic slow-motion flying bullet overlay
+        val isFreakOnALeash = currentSong?.title?.contains("Freak on a Leash", ignoreCase = true) == true
+        if (isFreakOnALeash) {
+            FreakOnALeashBulletOverlay(
+                isPlaying = isPlaying,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
         // 2. Foreground Player UI
         androidx.compose.animation.AnimatedVisibility(
             visible = isControlsVisible,
@@ -2382,6 +2392,136 @@ fun ThanksgivingSideNextButton(
             text = "🌽",
             fontSize = 44.sp
         )
+    }
+}
+
+@Composable
+private fun FreakOnALeashBulletOverlay(
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "FreakBulletTransition")
+    val animatedProgress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "FreakBulletProgress"
+    )
+
+    val progress = if (isPlaying) animatedProgress else 0.35f
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        fun getBulletPosition(p: Float): Offset {
+            val angle = p * 2f * Math.PI.toFloat()
+            val x = w / 2f + kotlin.math.sin(angle) * (w * 0.38f) + kotlin.math.sin(angle * 2f) * (w * 0.12f)
+            val y = h / 2f + kotlin.math.cos(angle * 1.5f) * (h * 0.28f) + kotlin.math.sin(angle * 3f) * (h * 0.10f)
+            return Offset(x, y)
+        }
+
+        val currentPos = getBulletPosition(progress)
+        val prevPos = getBulletPosition((progress - 0.008f + 1f) % 1f)
+        val dx = currentPos.x - prevPos.x
+        val dy = currentPos.y - prevPos.y
+        val headingAngle = kotlin.math.atan2(dy, dx)
+
+        // Draw smoke & wind trail behind bullet
+        val trailSteps = 16
+        for (i in 1..trailSteps) {
+            val trailP = (progress - i * 0.006f + 1f) % 1f
+            val pos = getBulletPosition(trailP)
+            val alpha = (1f - (i.toFloat() / trailSteps)) * 0.45f
+            val radius = (3.dp.toPx() + (i * 0.8f).dp.toPx())
+
+            // Vapor smoke cloud
+            drawCircle(
+                color = Color(0xFFE0E0E0).copy(alpha = alpha * 0.7f),
+                radius = radius,
+                center = pos
+            )
+            // Fire/heat core
+            drawCircle(
+                color = Color(0xFFFF9100).copy(alpha = alpha * 0.5f),
+                radius = radius * 0.5f,
+                center = pos
+            )
+        }
+
+        // Draw Heat Distortion Glow around bullet tip
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFFFFD54F).copy(alpha = 0.8f), Color(0xFFFF3D00).copy(alpha = 0.3f), Color.Transparent),
+                center = currentPos,
+                radius = 24.dp.toPx()
+            ),
+            radius = 24.dp.toPx(),
+            center = currentPos
+        )
+
+        // Draw Metallic Bullet (rotated to headingAngle)
+        withTransform({
+            translate(left = currentPos.x, top = currentPos.y)
+            rotate(degrees = Math.toDegrees(headingAngle.toDouble()).toFloat())
+        }) {
+            val bulletLength = 24.dp.toPx()
+            val bulletWidth = 9.dp.toPx()
+
+            val bulletPath = Path().apply {
+                moveTo(bulletLength / 2f, 0f)
+                cubicTo(
+                    bulletLength * 0.2f, -bulletWidth / 2f,
+                    -bulletLength * 0.2f, -bulletWidth / 2f,
+                    -bulletLength / 2f, -bulletWidth / 2f
+                )
+                lineTo(-bulletLength / 2f, bulletWidth / 2f)
+                cubicTo(
+                    -bulletLength * 0.2f, bulletWidth / 2f,
+                    bulletLength * 0.2f, bulletWidth / 2f,
+                    bulletLength / 2f, 0f
+                )
+                close()
+            }
+
+            // Bullet Metallic Brass Gradient
+            drawPath(
+                path = bulletPath,
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFF8B6508),
+                        Color(0xFFDAA520),
+                        Color(0xFFFFD700),
+                        Color(0xFFFFF59D)
+                    ),
+                    startX = -bulletLength / 2f,
+                    endX = bulletLength / 2f
+                )
+            )
+
+            // Outline for 3D metallic edge
+            drawPath(
+                path = bulletPath,
+                color = Color(0xFF3E2723),
+                style = Stroke(width = 1.2.dp.toPx())
+            )
+
+            // Shockwave rings ahead of bullet tip
+            if (isPlaying) {
+                drawArc(
+                    color = Color.White.copy(alpha = 0.7f),
+                    startAngle = -60f,
+                    sweepAngle = 120f,
+                    useCenter = false,
+                    topLeft = Offset(bulletLength / 2f - 3.dp.toPx(), -6.dp.toPx()),
+                    size = androidx.compose.ui.geometry.Size(10.dp.toPx(), 12.dp.toPx()),
+                    style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+        }
     }
 }
 
