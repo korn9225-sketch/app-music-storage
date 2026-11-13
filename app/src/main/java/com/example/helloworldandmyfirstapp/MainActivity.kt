@@ -2431,8 +2431,8 @@ private fun FreakOnALeashBulletOverlay(
     }
     lastProgress = progress
 
-    // Check if playback is in the "GO!" breakdown section (~2:18 to 2:55 / 138s to 175s)
-    val isGoBreakdown = currentPosition in 138_000L..175_000L
+    // Check if playback is at the 3-minute mark "GO!" vocal breakdown section (~2:58 to 3:32 / 178s to 212s)
+    val isGoBreakdown = currentPosition in 178_000L..212_000L
 
     Canvas(modifier = modifier) {
         val w = size.width
@@ -2463,24 +2463,50 @@ private fun FreakOnALeashBulletOverlay(
             drawBulletHoleMark(holePos, density)
         }
 
-        // 2. Draw "GO!" Vocal Drop Screen Edge Fire Ring (using progress bar fire band flame style)
+        // 2. Draw "GO!" Vocal Drop Screen Edge Fire Ring at 3:00 Mark
         if (isGoBreakdown && isPlaying) {
-            val flameSpacing = 16.dp.toPx()
+            val edgeGlowThickness = 45.dp.toPx()
+
+            // Edge Heat Vignette Glows
+            drawRect(
+                brush = Brush.verticalGradient(listOf(Color(0xFFFF3D00).copy(alpha = 0.55f), Color.Transparent)),
+                topLeft = Offset(0f, 0f),
+                size = androidx.compose.ui.geometry.Size(w, edgeGlowThickness)
+            )
+            drawRect(
+                brush = Brush.verticalGradient(listOf(Color.Transparent, Color(0xFFFF1744).copy(alpha = 0.65f))),
+                topLeft = Offset(0f, h - edgeGlowThickness),
+                size = androidx.compose.ui.geometry.Size(w, edgeGlowThickness)
+            )
+            drawRect(
+                brush = Brush.horizontalGradient(listOf(Color(0xFFFF3D00).copy(alpha = 0.5f), Color.Transparent)),
+                topLeft = Offset(0f, 0f),
+                size = androidx.compose.ui.geometry.Size(edgeGlowThickness, h)
+            )
+            drawRect(
+                brush = Brush.horizontalGradient(listOf(Color.Transparent, Color(0xFFFF3D00).copy(alpha = 0.5f))),
+                topLeft = Offset(w - edgeGlowThickness, 0f),
+                size = androidx.compose.ui.geometry.Size(edgeGlowThickness, h)
+            )
+
+            // Screen Edge Fire Band Flames
+            val flameSpacing = 14.dp.toPx()
             var flameX = 0f
             var fIdx = 0
             while (flameX <= w) {
-                val fPhase = progress * 6.28318f + fIdx * 1.1f
-                val fFlicker = 0.6f + 0.4f * kotlin.math.sin(fPhase)
-                val fW = 16.dp.toPx() * fFlicker
-                val fH = (18.dp.toPx() + 14.dp.toPx() * fFlicker)
-                val fVar = kotlin.math.sin(fPhase * 0.8f) * 0.3f
+                val fPhase = progress * 6.28318f + fIdx * 1.15f
+                val fFlicker = 0.55f + 0.45f * kotlin.math.sin(fPhase)
+                val fW = 18.dp.toPx() * fFlicker
+                val fH = (24.dp.toPx() + 18.dp.toPx() * fFlicker)
+                val fVar = kotlin.math.sin(fPhase * 0.8f) * 0.35f
 
-                // Bottom edge screen flames
-                drawFireBandFlame(flameX, h, fW, fH, fVar, Color(0xFFFF3D00))
-                drawFireBandFlame(flameX, h, fW * 0.5f, fH * 0.6f, fVar, Color(0xFFFFD54F))
+                // Bottom edge flames
+                drawFireBandFlame(flameX, h, fW, fH, fVar, Color(0xFFFF1744))
+                drawFireBandFlame(flameX, h, fW * 0.48f, fH * 0.62f, fVar, Color(0xFFFFD54F))
 
-                // Top edge screen flames (hanging inverted)
-                drawFireBandFlame(flameX, 22.dp.toPx(), fW, fH * 0.85f, fVar, Color(0xFFFF6D00))
+                // Top edge flames
+                drawFireBandFlame(flameX, 24.dp.toPx(), fW, fH * 0.85f, fVar, Color(0xFFFF6D00))
+                drawFireBandFlame(flameX, 24.dp.toPx(), fW * 0.45f, fH * 0.5f, fVar, Color(0xFFFFF59D))
 
                 flameX += flameSpacing
                 fIdx++
@@ -2489,31 +2515,44 @@ private fun FreakOnALeashBulletOverlay(
             var flameY = 0f
             fIdx = 0
             while (flameY <= h) {
-                val fPhase = progress * 6.28318f + fIdx * 1.3f
-                val fFlicker = 0.6f + 0.4f * kotlin.math.sin(fPhase)
-                val fW = 15.dp.toPx() * fFlicker
-                val fH = (16.dp.toPx() + 12.dp.toPx() * fFlicker)
-                val fVar = kotlin.math.sin(fPhase * 0.7f) * 0.3f
+                val fPhase = progress * 6.28318f + fIdx * 1.35f
+                val fFlicker = 0.55f + 0.45f * kotlin.math.sin(fPhase)
+                val fW = 16.dp.toPx() * fFlicker
+                val fH = (22.dp.toPx() + 16.dp.toPx() * fFlicker)
+                val fVar = kotlin.math.sin(fPhase * 0.75f) * 0.35f
 
-                // Left edge screen flames
-                drawFireBandFlame(12.dp.toPx(), flameY, fW, fH, fVar, Color(0xFFFF3D00))
-                // Right edge screen flames
-                drawFireBandFlame(w - 12.dp.toPx(), flameY, fW, fH, fVar, Color(0xFFFF3D00))
+                // Left & right edge flames
+                drawFireBandFlame(16.dp.toPx(), flameY, fW, fH, fVar, Color(0xFFFF3D00))
+                drawFireBandFlame(16.dp.toPx(), flameY, fW * 0.45f, fH * 0.55f, fVar, Color(0xFFFFD54F))
+
+                drawFireBandFlame(w - 16.dp.toPx(), flameY, fW, fH, fVar, Color(0xFFFF3D00))
+                drawFireBandFlame(w - 16.dp.toPx(), flameY, fW * 0.45f, fH * 0.55f, fVar, Color(0xFFFFD54F))
 
                 flameY += flameSpacing
                 fIdx++
             }
 
-            // Screen perimeter rising ember sparks
-            repeat(8) { sIdx ->
-                val sRise = (progress + sIdx * 0.125f) % 1f
-                val sX = (sIdx / 8f) * w
-                val sY = h - sRise * 120.dp.toPx()
-                val sAlpha = (1f - sRise) * 0.9f
+            // Screen perimeter floating ember sparks
+            repeat(14) { sIdx ->
+                val sRise = (progress + sIdx * 0.071f) % 1f
+                val side = sIdx % 4
+                val sparkX = when (side) {
+                    0 -> (sIdx / 14f) * w
+                    1 -> w - sRise * 30.dp.toPx()
+                    2 -> (1f - sIdx / 14f) * w
+                    else -> sRise * 30.dp.toPx()
+                }
+                val sparkY = when (side) {
+                    0 -> h - sRise * 140.dp.toPx()
+                    1 -> (sIdx / 14f) * h
+                    2 -> sRise * 140.dp.toPx()
+                    else -> (1f - sIdx / 14f) * h
+                }
+                val sAlpha = (1f - sRise) * 0.95f
                 drawCircle(
-                    color = if (sIdx % 2 == 0) Color(0xFFFFAB00) else Color(0xFFFF3D00),
-                    radius = (1.5f + (1f - sRise) * 1.5f) * density,
-                    center = Offset(sX, sY),
+                    color = if (sIdx % 3 == 0) Color(0xFFFF1744) else if (sIdx % 3 == 1) Color(0xFFFFAB00) else Color(0xFFFFF59D),
+                    radius = (1.4f + (1f - sRise) * 1.6f) * density,
+                    center = Offset(sparkX, sparkY),
                     alpha = sAlpha
                 )
             }
