@@ -4,6 +4,7 @@ import android.content.Context
 import android.webkit.CookieManager
 import java.security.MessageDigest
 
+@Suppress("UNUSED")
 object YouTubeMusicAuthManager {
     private const val PREFS_NAME = "yt_music_auth_prefs"
     private const val KEY_COOKIES = "yt_cookies"

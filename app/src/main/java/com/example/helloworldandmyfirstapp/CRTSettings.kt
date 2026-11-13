@@ -2,6 +2,7 @@ package com.example.helloworldandmyfirstapp
 
 import androidx.compose.ui.graphics.Color
 
+@Suppress("UNUSED")
 enum class CRTStyle(val displayName: String, val beamColor: Color, val glowColor: Color, val description: String) {
     CLASSIC_WHITE(
         displayName = "Classic White CRT",
@@ -29,6 +30,7 @@ enum class CRTStyle(val displayName: String, val beamColor: Color, val glowColor
     )
 }
 
+@Suppress("UNUSED")
 object CRTSettings {
     var selectedStyle: CRTStyle = CRTStyle.CLASSIC_WHITE
     var durationMs: Int = 300

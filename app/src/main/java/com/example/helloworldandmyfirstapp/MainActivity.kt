@@ -20,7 +20,6 @@ import android.hardware.camera2.CameraCharacteristics
 import android.view.WindowManager
 import android.content.pm.PackageManager
 import androidx.compose.runtime.mutableStateListOf
-import androidx.activity.compose.rememberLauncherForActivityResult
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.media.MediaMetadataRetriever
@@ -1263,7 +1262,6 @@ fun getLyricsForSong(song: Song?): List<String> {
     if (song == null) return listOf("No song currently playing.")
     
     val titleLower = song.title.lowercase()
-    val artistLower = song.artist.lowercase()
 
     return when {
         titleLower.contains("freak on a leash") -> listOf(
@@ -1709,6 +1707,7 @@ fun SongIdentifierOverlay(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun PlayerView(
     songs: List<Song>,
@@ -2187,6 +2186,7 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
 
 
 
+@Suppress("UNUSED")
 @Composable
 fun MisfitsMovieIntroSplash(onFinished: () -> Unit) {
     val fadeInAnim = remember { androidx.compose.animation.core.Animatable(0f) }
@@ -2243,6 +2243,7 @@ fun MisfitsMovieIntroSplash(onFinished: () -> Unit) {
     }
 }
 
+@Suppress("UNUSED")
 @Composable
 fun MaskedSkullSplashScreenReveal(
     modifier: Modifier = Modifier,
@@ -2743,6 +2744,7 @@ private fun PyroSeekBar(
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 private fun DrawScope.drawRollingSkateboard(
     centerX: Float,
     trackY: Float,
@@ -2845,6 +2847,7 @@ private fun DrawScope.drawFireBandFlame(
     )
 }
 
+@Suppress("UNUSED")
 private fun DrawScope.drawPyroFlame(
     centerX: Float,
     baseY: Float,
@@ -2877,6 +2880,7 @@ private fun DrawScope.drawPyroFlame(
     )
 }
 
+@Suppress("UNUSED")
 private fun DrawScope.drawRazorFlame(
     centerX: Float,
     baseY: Float,

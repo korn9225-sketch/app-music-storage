@@ -17,6 +17,7 @@ data class YouTubeAlbum(
     val artworkUrl: String
 )
 
+@Suppress("UNUSED", "UNUSED_PARAMETER")
 object YouTubeMusicEngine {
     private const val TAG = "YouTubeMusicEngine"
     private const val INNERTUBE_CLIENT_NAME = "WEB_REMIX"
