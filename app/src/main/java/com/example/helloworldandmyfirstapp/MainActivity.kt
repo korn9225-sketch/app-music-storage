@@ -1767,6 +1767,7 @@ fun PlayerView(
             FreakOnALeashBulletOverlay(
                 isPlaying = isPlaying,
                 currentSongIndex = currentSongIndex,
+                currentPosition = currentPosition,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -2400,6 +2401,7 @@ fun ThanksgivingSideNextButton(
 private fun FreakOnALeashBulletOverlay(
     isPlaying: Boolean,
     currentSongIndex: Int,
+    currentPosition: Long,
     modifier: Modifier = Modifier
 ) {
     val transition = rememberInfiniteTransition(label = "FreakBulletTransition")
@@ -2429,6 +2431,9 @@ private fun FreakOnALeashBulletOverlay(
     }
     lastProgress = progress
 
+    // Check if playback is in the "GO!" breakdown section (~2:18 to 2:55 / 138s to 175s)
+    val isGoBreakdown = currentPosition in 138_000L..175_000L
+
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -2452,10 +2457,66 @@ private fun FreakOnALeashBulletOverlay(
             }
         }
 
-        // 1. Draw accumulated bullet holes with silver crack lines & smoldering rims
+        // 1. Draw accumulated realistic bullet hole impact marks
         val density = density
         bulletHoles.forEach { holePos ->
             drawBulletHoleMark(holePos, density)
+        }
+
+        // 2. Draw "GO!" Vocal Drop Screen Edge Fire Ring (using progress bar fire band flame style)
+        if (isGoBreakdown && isPlaying) {
+            val flameSpacing = 16.dp.toPx()
+            var flameX = 0f
+            var fIdx = 0
+            while (flameX <= w) {
+                val fPhase = progress * 6.28318f + fIdx * 1.1f
+                val fFlicker = 0.6f + 0.4f * kotlin.math.sin(fPhase)
+                val fW = 16.dp.toPx() * fFlicker
+                val fH = (18.dp.toPx() + 14.dp.toPx() * fFlicker)
+                val fVar = kotlin.math.sin(fPhase * 0.8f) * 0.3f
+
+                // Bottom edge screen flames
+                drawFireBandFlame(flameX, h, fW, fH, fVar, Color(0xFFFF3D00))
+                drawFireBandFlame(flameX, h, fW * 0.5f, fH * 0.6f, fVar, Color(0xFFFFD54F))
+
+                // Top edge screen flames (hanging inverted)
+                drawFireBandFlame(flameX, 22.dp.toPx(), fW, fH * 0.85f, fVar, Color(0xFFFF6D00))
+
+                flameX += flameSpacing
+                fIdx++
+            }
+
+            var flameY = 0f
+            fIdx = 0
+            while (flameY <= h) {
+                val fPhase = progress * 6.28318f + fIdx * 1.3f
+                val fFlicker = 0.6f + 0.4f * kotlin.math.sin(fPhase)
+                val fW = 15.dp.toPx() * fFlicker
+                val fH = (16.dp.toPx() + 12.dp.toPx() * fFlicker)
+                val fVar = kotlin.math.sin(fPhase * 0.7f) * 0.3f
+
+                // Left edge screen flames
+                drawFireBandFlame(12.dp.toPx(), flameY, fW, fH, fVar, Color(0xFFFF3D00))
+                // Right edge screen flames
+                drawFireBandFlame(w - 12.dp.toPx(), flameY, fW, fH, fVar, Color(0xFFFF3D00))
+
+                flameY += flameSpacing
+                fIdx++
+            }
+
+            // Screen perimeter rising ember sparks
+            repeat(8) { sIdx ->
+                val sRise = (progress + sIdx * 0.125f) % 1f
+                val sX = (sIdx / 8f) * w
+                val sY = h - sRise * 120.dp.toPx()
+                val sAlpha = (1f - sRise) * 0.9f
+                drawCircle(
+                    color = if (sIdx % 2 == 0) Color(0xFFFFAB00) else Color(0xFFFF3D00),
+                    radius = (1.5f + (1f - sRise) * 1.5f) * density,
+                    center = Offset(sX, sY),
+                    alpha = sAlpha
+                )
+            }
         }
 
         val prevPos = getBulletPosition((progress - 0.008f + 1f) % 1f)
@@ -2463,7 +2524,7 @@ private fun FreakOnALeashBulletOverlay(
         val dy = currentPos.y - prevPos.y
         val headingAngle = kotlin.math.atan2(dy, dx)
 
-        // 2. Draw smoke & wind trail behind bullet
+        // 3. Draw smoke & wind trail behind bullet
         val trailSteps = 16
         for (i in 1..trailSteps) {
             val trailP = (progress - i * 0.006f + 1f) % 1f
@@ -2485,7 +2546,7 @@ private fun FreakOnALeashBulletOverlay(
             )
         }
 
-        // 3. Draw Heat Distortion Glow around bullet tip
+        // 4. Draw Heat Distortion Glow around bullet tip
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(Color(0xFFFFD54F).copy(alpha = 0.8f), Color(0xFFFF3D00).copy(alpha = 0.3f), Color.Transparent),
@@ -2496,7 +2557,7 @@ private fun FreakOnALeashBulletOverlay(
             center = currentPos
         )
 
-        // 4. Draw Metallic Bullet (rotated to headingAngle)
+        // 5. Draw Metallic Bullet (rotated to headingAngle)
         withTransform({
             translate(left = currentPos.x, top = currentPos.y)
             rotate(degrees = Math.toDegrees(headingAngle.toDouble()).toFloat())
@@ -2559,45 +2620,85 @@ private fun FreakOnALeashBulletOverlay(
 }
 
 private fun DrawScope.drawBulletHoleMark(pos: Offset, density: Float) {
-    val holeRadius = 6.5.dp.toPx()
-    val outerGlow = 13.dp.toPx()
+    val craterRadius = 7.5.dp.toPx()
+    val heatRadius = 16.dp.toPx()
 
-    // Heat glow around impact crater
+    // 1. Smoldering hot impact ring glow
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(Color(0xFFFF5722).copy(alpha = 0.55f), Color(0xFFFF9100).copy(alpha = 0.2f), Color.Transparent),
+            colors = listOf(Color(0xFFFF3D00).copy(alpha = 0.65f), Color(0xFFFF9100).copy(alpha = 0.3f), Color.Transparent),
             center = pos,
-            radius = outerGlow
+            radius = heatRadius
         ),
-        radius = outerGlow,
+        radius = heatRadius,
         center = pos
     )
 
-    // Dark bullet entry crater
+    // 2. Outer dark shattered metal impact ring
     drawCircle(
-        color = Color(0xFF0A0A0C),
-        radius = holeRadius,
-        center = pos
-    )
-    // Deep center void
-    drawCircle(
-        color = Color(0xFF1C1C22),
-        radius = holeRadius * 0.55f,
+        color = Color(0xFF1B1B22),
+        radius = craterRadius + 2.5.dp.toPx(),
         center = pos
     )
 
-    // Silver fracture cracks radiating outward
-    val crackAngles = floatArrayOf(0.4f, 1.6f, 2.9f, 4.2f, 5.5f)
-    for (angle in crackAngles) {
-        val len = (8f + (angle * 7f) % 5f) * density
-        val endX = pos.x + kotlin.math.cos(angle) * len
-        val endY = pos.y + kotlin.math.sin(angle) * len
+    // 3. Pitch-black entry hole
+    drawCircle(
+        color = Color(0xFF030305),
+        radius = craterRadius,
+        center = pos
+    )
+
+    // 4. Inner metallic lead wipe ring
+    drawCircle(
+        color = Color(0xFF282832),
+        radius = craterRadius * 0.5f,
+        center = pos
+    )
+
+    // 5. Realistic spiderweb glass/metal fracture cracks
+    val angles = floatArrayOf(0.2f, 0.95f, 1.75f, 2.55f, 3.35f, 4.15f, 4.95f, 5.75f)
+    for (i in angles.indices) {
+        val mainAngle = angles[i]
+        val mainLen = (12f + (i * 7) % 6) * density
+        val mainEndX = pos.x + kotlin.math.cos(mainAngle) * mainLen
+        val mainEndY = pos.y + kotlin.math.sin(mainAngle) * mainLen
+
+        // Primary fracture line
         drawLine(
-            color = Color.White.copy(alpha = 0.72f),
+            color = Color.White.copy(alpha = 0.85f),
             start = pos,
-            end = Offset(endX, endY),
-            strokeWidth = 1.1.dp.toPx(),
+            end = Offset(mainEndX, mainEndY),
+            strokeWidth = 1.2.dp.toPx(),
             cap = StrokeCap.Round
+        )
+
+        // Jagged sub-branch fracture
+        val subAngle = mainAngle + if (i % 2 == 0) 0.35f else -0.35f
+        val subLen = mainLen * 0.55f
+        val subStartX = pos.x + kotlin.math.cos(mainAngle) * (mainLen * 0.5f)
+        val subStartY = pos.y + kotlin.math.sin(mainAngle) * (mainLen * 0.5f)
+        val subEndX = subStartX + kotlin.math.cos(subAngle) * subLen
+        val subEndY = subStartY + kotlin.math.sin(subAngle) * subLen
+
+        drawLine(
+            color = Color.White.copy(alpha = 0.6f),
+            start = Offset(subStartX, subStartY),
+            end = Offset(subEndX, subEndY),
+            strokeWidth = 0.9.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+
+    // 6. Metallic shrapnel debris specks around crater
+    val specks = floatArrayOf(0.5f, 2.1f, 3.8f, 5.2f)
+    for (sp in specks) {
+        val spDist = (craterRadius + 4.dp.toPx() + (sp * 3f) % 4f)
+        val spX = pos.x + kotlin.math.cos(sp) * spDist
+        val spY = pos.y + kotlin.math.sin(sp) * spDist
+        drawCircle(
+            color = if (sp.toInt() % 2 == 0) Color(0xFFFFD700) else Color(0xFFE0E0E0),
+            radius = 1.1.dp.toPx(),
+            center = Offset(spX, spY)
         )
     }
 }
