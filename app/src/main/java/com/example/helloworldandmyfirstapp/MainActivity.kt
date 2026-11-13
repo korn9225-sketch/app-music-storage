@@ -2916,6 +2916,7 @@ private fun DrawScope.drawRazorFlame(
     )
 }
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun SettingsView(
     playerColor: Color,
@@ -2936,12 +2937,12 @@ fun SettingsView(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(settingsColor.copy(alpha = 0.8f))
+            .background(if (isDarkMode) Color.Black else Color(0xFFF5F5F5))
             .verticalScroll(scrollState)
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        Text("Settings", style = MaterialTheme.typography.headlineMedium, color = if (isDarkMode) Color.White else Color.Black)
         Spacer(modifier = Modifier.height(24.dp))
 
         // Light / Dark Theme Mode Section
@@ -2986,84 +2987,6 @@ fun SettingsView(
                         uncheckedTrackColor = Color.Gray
                     )
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text("Player Background", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        ColorRow(selectedColor = playerColor, onColorSelect = onPlayerColorChange)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text("Settings Background", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(8.dp))
-        ColorRow(selectedColor = settingsColor, onColorSelect = onSettingsColorChange)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Camera Flashlight Strobe Section
-        Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF222222))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Camera Flash Strobe", style = MaterialTheme.typography.titleMedium, color = Color(0xFFFFA500))
-                        Text("Flashes camera light while music plays", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    }
-                    Switch(
-                        checked = isStrobeEnabled,
-                        onCheckedChange = onStrobeToggle
-                    )
-                }
-
-                if (isStrobeEnabled) {
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Sync Flash with Music Rhythm", style = MaterialTheme.typography.bodyMedium, color = Color.White)
-                            Text("Pulses flash to music beat pattern", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        }
-                        Switch(
-                            checked = isBeatSyncEnabled,
-                            onCheckedChange = onBeatSyncToggle
-                        )
-                    }
-
-                    if (!isBeatSyncEnabled) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Manual Strobe Speed", style = MaterialTheme.typography.bodyMedium, color = Color.White)
-                            Text("${strobeSpeedMs.toInt()} ms", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Color(0xFFFFA500))
-                        }
-                        Slider(
-                            value = strobeSpeedMs,
-                            onValueChange = onStrobeSpeedChange,
-                            valueRange = 50f..500f,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFFFFA500),
-                                activeTrackColor = Color(0xFFFFA500)
-                            )
-                        )
-                    }
-                }
             }
         }
 
@@ -3301,6 +3224,7 @@ fun SettingsView(
     }
 }
 
+@Suppress("UNUSED")
 @Composable
 fun ColorRow(selectedColor: Color, onColorSelect: (Color) -> Unit) {
     Row(
