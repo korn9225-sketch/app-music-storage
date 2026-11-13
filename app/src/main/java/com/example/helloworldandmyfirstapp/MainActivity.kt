@@ -1761,11 +1761,12 @@ fun PlayerView(
             artworkUrl = currentSong?.getVerifiedArtworkUrl()
         )
 
-        // Freak on a Leash iconic slow-motion flying bullet overlay
+        // Freak on a Leash iconic slow-motion flying bullet & bullet holes overlay
         val isFreakOnALeash = currentSong?.title?.contains("Freak on a Leash", ignoreCase = true) == true
         if (isFreakOnALeash) {
             FreakOnALeashBulletOverlay(
                 isPlaying = isPlaying,
+                currentSongIndex = currentSongIndex,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -2398,6 +2399,7 @@ fun ThanksgivingSideNextButton(
 @Composable
 private fun FreakOnALeashBulletOverlay(
     isPlaying: Boolean,
+    currentSongIndex: Int,
     modifier: Modifier = Modifier
 ) {
     val transition = rememberInfiniteTransition(label = "FreakBulletTransition")
@@ -2412,6 +2414,20 @@ private fun FreakOnALeashBulletOverlay(
     )
 
     val progress = if (isPlaying) animatedProgress else 0.35f
+    val bulletHoles = remember { mutableStateListOf<Offset>() }
+    var lastProgress by remember { mutableFloatStateOf(0f) }
+
+    // Reset all bullet holes if song changes
+    LaunchedEffect(currentSongIndex) {
+        bulletHoles.clear()
+        lastProgress = 0f
+    }
+
+    // Reset bullet holes if song restarts or wraps around
+    if (progress < lastProgress - 0.2f) {
+        bulletHoles.clear()
+    }
+    lastProgress = progress
 
     Canvas(modifier = modifier) {
         val w = size.width
@@ -2425,12 +2441,29 @@ private fun FreakOnALeashBulletOverlay(
         }
 
         val currentPos = getBulletPosition(progress)
+
+        // Accumulate new bullet hole impact mark as bullet travels
+        if (isPlaying) {
+            val lastHole = bulletHoles.lastOrNull()
+            if (lastHole == null || (currentPos - lastHole).getDistance() > 42.dp.toPx()) {
+                if (bulletHoles.size < 35) {
+                    bulletHoles.add(currentPos)
+                }
+            }
+        }
+
+        // 1. Draw accumulated bullet holes with silver crack lines & smoldering rims
+        val density = density
+        bulletHoles.forEach { holePos ->
+            drawBulletHoleMark(holePos, density)
+        }
+
         val prevPos = getBulletPosition((progress - 0.008f + 1f) % 1f)
         val dx = currentPos.x - prevPos.x
         val dy = currentPos.y - prevPos.y
         val headingAngle = kotlin.math.atan2(dy, dx)
 
-        // Draw smoke & wind trail behind bullet
+        // 2. Draw smoke & wind trail behind bullet
         val trailSteps = 16
         for (i in 1..trailSteps) {
             val trailP = (progress - i * 0.006f + 1f) % 1f
@@ -2452,7 +2485,7 @@ private fun FreakOnALeashBulletOverlay(
             )
         }
 
-        // Draw Heat Distortion Glow around bullet tip
+        // 3. Draw Heat Distortion Glow around bullet tip
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(Color(0xFFFFD54F).copy(alpha = 0.8f), Color(0xFFFF3D00).copy(alpha = 0.3f), Color.Transparent),
@@ -2463,7 +2496,7 @@ private fun FreakOnALeashBulletOverlay(
             center = currentPos
         )
 
-        // Draw Metallic Bullet (rotated to headingAngle)
+        // 4. Draw Metallic Bullet (rotated to headingAngle)
         withTransform({
             translate(left = currentPos.x, top = currentPos.y)
             rotate(degrees = Math.toDegrees(headingAngle.toDouble()).toFloat())
@@ -2522,6 +2555,50 @@ private fun FreakOnALeashBulletOverlay(
                 )
             }
         }
+    }
+}
+
+private fun DrawScope.drawBulletHoleMark(pos: Offset, density: Float) {
+    val holeRadius = 6.5.dp.toPx()
+    val outerGlow = 13.dp.toPx()
+
+    // Heat glow around impact crater
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(Color(0xFFFF5722).copy(alpha = 0.55f), Color(0xFFFF9100).copy(alpha = 0.2f), Color.Transparent),
+            center = pos,
+            radius = outerGlow
+        ),
+        radius = outerGlow,
+        center = pos
+    )
+
+    // Dark bullet entry crater
+    drawCircle(
+        color = Color(0xFF0A0A0C),
+        radius = holeRadius,
+        center = pos
+    )
+    // Deep center void
+    drawCircle(
+        color = Color(0xFF1C1C22),
+        radius = holeRadius * 0.55f,
+        center = pos
+    )
+
+    // Silver fracture cracks radiating outward
+    val crackAngles = floatArrayOf(0.4f, 1.6f, 2.9f, 4.2f, 5.5f)
+    for (angle in crackAngles) {
+        val len = (8f + (angle * 7f) % 5f) * density
+        val endX = pos.x + kotlin.math.cos(angle) * len
+        val endY = pos.y + kotlin.math.sin(angle) * len
+        drawLine(
+            color = Color.White.copy(alpha = 0.72f),
+            start = pos,
+            end = Offset(endX, endY),
+            strokeWidth = 1.1.dp.toPx(),
+            cap = StrokeCap.Round
+        )
     }
 }
 
