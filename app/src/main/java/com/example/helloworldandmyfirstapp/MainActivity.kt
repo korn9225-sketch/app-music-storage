@@ -208,6 +208,8 @@ fun Song.getVerifiedArtworkUrl(): String {
         "hatebreed" -> {
             if (album.equals("Live Dominance", ignoreCase = true)) {
                 "https://img.youtube.com/vi/Xigg9UjWJNg/hqdefault.jpg"
+            } else if (album.equals("Satisfaction Is The Death Of Desire", ignoreCase = true) || album.contains("Satisfaction", ignoreCase = true)) {
+                "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"
             } else {
                 "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"
             }
@@ -419,6 +421,22 @@ class MainActivity : ComponentActivity() {
                         Song("A.T.F.", "Biohazard", "Uncivilization", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/14.a.t.f.mp3", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/biohazarduncivilization2001.jpg"),
                         Song("Life Of My Own", "Biohazard", "Uncivilization", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/15.life.of.my.own.mp3", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/biohazarduncivilization2001.jpg"),
                         Song("Sex And Violence", "Biohazard", "Uncivilization", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/16.sex.and.violence.mp3", "https://github.com/korn9225-sketch/app-music-storage/releases/download/v1.0/biohazarduncivilization2001.jpg"),
+
+                        // Hatebreed - Satisfaction Is The Death Of Desire Tracks (GitHub Storage)
+                        Song("Empty Promises", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/01%20-%20Empty%20Promises.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Burn the Lies", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/02%20-%20Burn%20the%20Lies.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Before Dishonor", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/03%20-%20Before%20Dishonor.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Puritan", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/04%20-%20Puritan.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Conceived Through an Act of Violence", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/05%20-%20Conceived%20Through%20an%20Act%20of%20Violence.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Afflicted Past", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/06%20-%20Afflicted%20Past.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Prepare For War", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/07%20-%20Prepare%20For%20War.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Not One Truth", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/08%20-%20Not%20One%20Truth.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Betrayed by Life", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/09%20-%20Betrayed%20by%20Life.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Mark My Words", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/10%20-%20Mark%20My%20Words.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Last Breath", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/11%20-%20Last%20Breath.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Burial for the Living", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/12%20-%20Burial%20for%20the%20Living.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Worlds Apart", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/13%20-%20Worlds%20Apart.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+                        Song("Driven by Suffering", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/14%20-%20Driven%20by%20Suffering.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
 
                         // Hatebreed - Fatal Paradox Tracks (Local High-Quality MP3s in Track Order 01-11)
                         Song("Kill Count Increase", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_01_kill_count_increase}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
@@ -2087,6 +2105,7 @@ suspend fun fetchRepoSongsFromGitHub(): Pair<List<Song>, String?> {
                     lowerPath.contains("uncivilization") -> "Uncivilization"
                     lowerPath.contains("biohazard") || lowerPath.contains("world.on.fire") || lowerPath.contains("kill.or.be.killed") -> "Kill Or Be Killed"
                     lowerPath.contains("nofx") -> "The Decline"
+                    lowerPath.contains("satisfaction") || lowerPath.contains("desire") -> "Satisfaction Is The Death Of Desire"
                     lowerPath.contains("fatal") || lowerPath.contains("paradox") -> "Fatal Paradox"
                     lowerPath.contains("hatebreed") -> if (isVideo) "Live Dominance" else "Fatal Paradox"
                     lowerPath.contains("mudvayne") -> "v2.0 Beta"
@@ -4536,6 +4555,22 @@ val officialTrackCatalog: Map<Pair<String, String>, Int> = mapOf(
 
     // NOFX
     Pair("nofx", "the decline") to 1,
+
+    // Hatebreed - Satisfaction Is The Death Of Desire
+    Pair("hatebreed", "empty promises") to 1,
+    Pair("hatebreed", "burn the lies") to 2,
+    Pair("hatebreed", "before dishonor") to 3,
+    Pair("hatebreed", "puritan") to 4,
+    Pair("hatebreed", "conceived through an act of violence") to 5,
+    Pair("hatebreed", "afflicted past") to 6,
+    Pair("hatebreed", "prepare for war") to 7,
+    Pair("hatebreed", "not one truth") to 8,
+    Pair("hatebreed", "betrayed by life") to 9,
+    Pair("hatebreed", "mark my words") to 10,
+    Pair("hatebreed", "last breath") to 11,
+    Pair("hatebreed", "burial for the living") to 12,
+    Pair("hatebreed", "worlds apart") to 13,
+    Pair("hatebreed", "driven by suffering") to 14,
 
     // Hatebreed - Fatal Paradox
     Pair("hatebreed", "kill count increase") to 1,
