@@ -210,12 +210,6 @@ fun Song.getVerifiedArtworkUrl(): String {
                 "https://img.youtube.com/vi/Xigg9UjWJNg/hqdefault.jpg"
             } else if (album.equals("Satisfaction Is The Death Of Desire", ignoreCase = true) || album.contains("Satisfaction", ignoreCase = true)) {
                 "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"
-            } else if (album.equals("For The Lions", ignoreCase = true) || album.contains("Lions", ignoreCase = true)) {
-                "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_for_the_lions/For%20the%20Lions/Folder.jpg"
-            } else if (album.equals("The Rise Of Brutality", ignoreCase = true) || album.contains("Brutality", ignoreCase = true)) {
-                "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_rise_of_brutality/Rise%20of%20Brutality/Folder.jpg"
-            } else if (album.equals("Hatebreed", ignoreCase = true)) {
-                "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_self_titled/HATEBREED/Folder.jpg"
             } else {
                 "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"
             }
@@ -444,8 +438,7 @@ class MainActivity : ComponentActivity() {
                         Song("Worlds Apart", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/13%20-%20Worlds%20Apart.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
                         Song("Driven by Suffering", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/14%20-%20Driven%20by%20Suffering.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
 
-                        // Hatebreed - For The Lions Tracks
-                        Song("Sick of Talk", "Hatebreed", "For The Lions", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_for_the_lions/For%20the%20Lions/15%20Sick%20of%20Talk%20(2).mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_for_the_lions/For%20the%20Lions/Folder.jpg"),
+
 
                         // Hatebreed - Fatal Paradox Tracks (Local High-Quality MP3s in Track Order 01-11)
                         Song("Kill Count Increase", "Hatebreed", "Fatal Paradox", "android.resource://com.example.helloworldandmyfirstapp/${R.raw.hatebreed_01_kill_count_increase}", "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"),
