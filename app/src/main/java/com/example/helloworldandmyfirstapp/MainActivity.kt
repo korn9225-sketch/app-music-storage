@@ -210,6 +210,8 @@ fun Song.getVerifiedArtworkUrl(): String {
                 "https://img.youtube.com/vi/Xigg9UjWJNg/hqdefault.jpg"
             } else if (album.equals("Satisfaction Is The Death Of Desire", ignoreCase = true) || album.contains("Satisfaction", ignoreCase = true)) {
                 "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"
+            } else if (album.equals("The Concrete Confessional", ignoreCase = true) || album.contains("Concrete", ignoreCase = true)) {
+                "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"
             } else {
                 "android.resource://com.example.helloworldandmyfirstapp/${R.drawable.hatebreed_fatal_paradox_cover}"
             }
@@ -437,6 +439,21 @@ class MainActivity : ComponentActivity() {
                         Song("Burial for the Living", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/12%20-%20Burial%20for%20the%20Living.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
                         Song("Worlds Apart", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/13%20-%20Worlds%20Apart.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
                         Song("Driven by Suffering", "Hatebreed", "Satisfaction Is The Death Of Desire", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/14%20-%20Driven%20by%20Suffering.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_satisfaction/Front.jpg"),
+
+                        // Hatebreed - The Concrete Confessional Tracks (GitHub Storage)
+                        Song("A.D.", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/01.%20A.D..mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Looking Down the Barrel of Today", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/02.%20Looking%20Down%20the%20Barrel%20of%20Today.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Seven Enemies", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/03.%20Seven%20Enemies.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("In the Walls", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/04.%20In%20the%20Walls.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("From Grace We've Fallen", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/05.%20From%20Grace%20We_ve%20Fallen.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Us Against Us", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/06.%20Us%20Against%20Us.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Something's Off", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/07.%20Something_s%20Off.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Remember When", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/08.%20Remember%20When.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Slaughtered in Their Dreams", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/09.%20Slaughtered%20in%20Their%20Dreams.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("The Apex Within", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/10.%20The%20Apex%20Within.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Walking the Knife", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/11.%20Walking%20the%20Knife.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Dissonance", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/12.%20Dissonance.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
+                        Song("Serve Your Masters", "Hatebreed", "The Concrete Confessional", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/13.%20Serve%20Your%20Masters.mp3", "https://raw.githubusercontent.com/korn9225-sketch/app-music-storage/main/hatebreed_concrete_confessional/front.png"),
 
 
 
@@ -4557,6 +4574,21 @@ val officialTrackCatalog: Map<Pair<String, String>, Int> = mapOf(
 
     // NOFX
     Pair("nofx", "the decline") to 1,
+
+    // Hatebreed - The Concrete Confessional
+    Pair("hatebreed", "a.d.") to 1,
+    Pair("hatebreed", "looking down the barrel of today") to 2,
+    Pair("hatebreed", "seven enemies") to 3,
+    Pair("hatebreed", "in the walls") to 4,
+    Pair("hatebreed", "from grace we've fallen") to 5,
+    Pair("hatebreed", "us against us") to 6,
+    Pair("hatebreed", "something's off") to 7,
+    Pair("hatebreed", "remember when") to 8,
+    Pair("hatebreed", "slaughtered in their dreams") to 9,
+    Pair("hatebreed", "the apex within") to 10,
+    Pair("hatebreed", "walking the knife") to 11,
+    Pair("hatebreed", "dissonance") to 12,
+    Pair("hatebreed", "serve your masters") to 13,
 
     // Hatebreed - Satisfaction Is The Death Of Desire
     Pair("hatebreed", "empty promises") to 1,
